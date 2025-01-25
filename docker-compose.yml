@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_SERVER=db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=cloudpioneer
+      - POSTGRES_DB=cloudpioneer
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - REDIS_HOST=redis
+    depends_on:
+      - db
+      - kafka
+      - redis
+    volumes:
+      - ./models:/app/models
+    networks:
+      - cloud-pioneer-network
+
+  db:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=cloudpioneer
+      - POSTGRES_DB=cloudpioneer
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cloud-pioneer-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.0.0
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+    depends_on:
+      - zookeeper
+    networks:
+      - cloud-pioneer-network
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.0
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=2181
+    networks:
+      - cloud-pioneer-network
+
+  redis:
+    image: redis:6.2
+    command: redis-server --requirepass cloudpioneer
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - cloud-pioneer-network
+
+  prometheus:
+    image: prom/prometheus:v2.30.3
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9090:9090"
+    networks:
+      - cloud-pioneer-network
+
+  grafana:
+    image: grafana/grafana:8.2.0
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=cloudpioneer
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - cloud-pioneer-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      - api
+    networks:
+      - cloud-pioneer-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  cloud-pioneer-network:
+    driver: bridge

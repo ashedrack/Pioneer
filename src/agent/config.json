@@ -1,0 +1,47 @@
+{
+    "agent": {
+        "collection_interval": 60,
+        "shipping_interval": 10,
+        "log_level": "INFO"
+    },
+    "collectors": {
+        "system": {
+            "enabled": true,
+            "interval": 60
+        },
+        "mysql": {
+            "enabled": true,
+            "interval": 30,
+            "host": "localhost",
+            "user": "monitoring_user",
+            "password": "YOUR_PASSWORD",
+            "database": "your_database"
+        },
+        "docker": {
+            "enabled": true,
+            "interval": 30,
+            "include_containers": [],
+            "exclude_containers": ["some-system-container"]
+        }
+    },
+    "backends": {
+        "aws": {
+            "enabled": true,
+            "region": "us-east-1",
+            "namespace": "CloudPioneer"
+        },
+        "azure": {
+            "enabled": false,
+            "metrics_account_name": "your-metrics-account",
+            "rule_id": "your-rule-id"
+        },
+        "gcp": {
+            "enabled": false,
+            "project_name": "your-project-name"
+        }
+    },
+    "tags": {
+        "environment": "production",
+        "service": "web-app"
+    }
+}

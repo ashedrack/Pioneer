@@ -1,0 +1,5 @@
+For Linux/macOS:
+curl -L https://storage.googleapis.com/cloud-pioneer-agent/install.sh | bash -s -- -k YOUR_API_KEY
+
+For Windows PowerShell:
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri "https://storage.googleapis.com/cloud-pioneer-agent/install.ps1" -OutFile "$env:temp\install.ps1"; & "$env:temp\install.ps1" -ApiKey "YOUR_API_KEY"

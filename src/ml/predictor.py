@@ -2,10 +2,15 @@ import tensorflow as tf
 import numpy as np
 from typing import List, Dict, Any
 import logging
+from datetime import datetime, timedelta
+from collections import defaultdict
+import pytz
+from dateutil import parser
 
 class ResourcePredictor:
     def __init__(self):
         self.model = None
+        self._metrics_store = defaultdict(list)
         self.logger = logging.getLogger(__name__)
         
     def build_model(self, input_shape: tuple) -> None:
@@ -60,3 +65,60 @@ class ResourcePredictor:
             "mae": float(mae),
             "rmse": float(np.sqrt(mse))
         }
+
+    def store_metrics(self, resource_id: str, timestamp: str, metrics: Dict[str, float]) -> None:
+        """Store resource metrics."""
+        try:
+            self._metrics_store[resource_id].append({
+                'timestamp': timestamp,
+                'metrics': metrics
+            })
+            self.logger.info(f"Stored metrics for resource {resource_id} at {timestamp}")
+        except Exception as e:
+            self.logger.error(f"Failed to store metrics: {str(e)}")
+            raise
+
+    def get_historical_metrics(self, resource_id: str, start_time: str, end_time: str) -> List[Dict[str, Any]]:
+        """Get historical metrics for a resource."""
+        try:
+            metrics = self._metrics_store.get(resource_id, [])
+            
+            # Convert timestamps to UTC for comparison
+            def parse_timestamp(ts: str) -> datetime:
+                dt = parser.parse(ts)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=pytz.UTC)
+                return dt.astimezone(pytz.UTC)
+            
+            start = parse_timestamp(start_time)
+            end = parse_timestamp(end_time)
+            
+            filtered_metrics = []
+            for metric in metrics:
+                timestamp = parse_timestamp(metric['timestamp'])
+                if start <= timestamp <= end:
+                    filtered_metrics.append(metric)
+            
+            return filtered_metrics
+        except Exception as e:
+            self.logger.error(f"Failed to get historical metrics: {str(e)}")
+            raise
+
+    def predict_usage(self, resource_id: str, hours: int = 24) -> Dict[str, Any]:
+        """Predict future resource usage."""
+        try:
+            # Mock prediction for development
+            now = datetime.now(pytz.UTC)
+            return {
+                'cpu_usage': [
+                    {'timestamp': (now + timedelta(hours=i)).isoformat(), 'value': 50.0}
+                    for i in range(hours)
+                ],
+                'memory_usage': [
+                    {'timestamp': (now + timedelta(hours=i)).isoformat(), 'value': 40.0}
+                    for i in range(hours)
+                ]
+            }
+        except Exception as e:
+            self.logger.error(f"Failed to predict usage: {str(e)}")
+            raise

@@ -1,0 +1,3 @@
+"""
+Automation package for CloudPioneer
+"""

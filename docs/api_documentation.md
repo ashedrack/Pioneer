@@ -180,150 +180,130 @@ Get AI-powered optimization recommendations.
 }
 ```
 
-### Schedule Management
+## Error Handling
 
-#### Create Schedule
+### Error Responses
 
-```http
-POST /schedules
+```json
+{
+  "error": {
+    "code": "string",
+    "message": "string",
+    "details": {}
+  }
+}
 ```
 
-Create a new resource optimization schedule.
+### HTTP Status Codes
+
+- 200: Success
+- 400: Bad Request
+- 401: Unauthorized
+- 403: Forbidden
+- 404: Not Found
+- 500: Internal Server Error
+
+## Rate Limiting
+
+- Rate limit: 1000 requests per minute
+- Rate limit header: X-RateLimit-Limit
+- Remaining requests: X-RateLimit-Remaining
+- Reset time: X-RateLimit-Reset
+
+## Webhooks
+
+### Configure Webhook
+
+```http
+POST /webhooks/configure
+```
 
 **Request Body:**
 ```json
 {
-  "resource_id": "string",
-  "schedule_type": "start|stop|resize",
-  "cron_expression": "0 0 * * *",
-  "timezone": "UTC",
-  "action_params": {
-    "instance_type": "t3.micro",
-    "target_state": "running"
+  "url": "string",
+  "events": ["resource.created", "action.scheduled"],
+  "secret": "string"
+}
+```
+
+### Webhook Payload Example
+
+```json
+{
+  "event_type": "action.scheduled",
+  "timestamp": "2025-01-24T12:00:00Z",
+  "data": {
+    "resource_id": "string",
+    "action": "string",
+    "scheduled_time": "datetime"
   }
 }
 ```
 
-**Response:**
-```json
-{
-  "schedule_id": "sch_123456",
-  "status": "active",
-  "created_at": "2025-01-25T17:26:44Z"
-}
+## SDK Examples
+
+### Python
+
+```python
+from cloudpioneer import CloudPioneerClient
+
+client = CloudPioneerClient(api_key='your_api_key')
+
+# Get resource metrics
+metrics = client.get_resource_metrics(
+    resource_id='i-1234567890abcdef0',
+    metric_type='cpu'
+)
+
+# Schedule action
+schedule = client.schedule_action(
+    resource_id='i-1234567890abcdef0',
+    action='shutdown',
+    scheduled_time='2025-01-25T00:00:00Z'
+)
 ```
 
-#### List Schedules
+### JavaScript
 
-```http
-GET /schedules
+```javascript
+const CloudPioneer = require('cloudpioneer');
+
+const client = new CloudPioneer('your_api_key');
+
+// Get cost analysis
+client.getCostAnalysis({
+  startDate: '2025-01-01',
+  endDate: '2025-01-24',
+  groupBy: 'service'
+})
+.then(costs => console.log(costs))
+.catch(error => console.error(error));
 ```
 
-List all active schedules.
+## Best Practices
 
-**Parameters:**
-```json
-{
-  "resource_id": "string",
-  "status": "active|inactive",
-  "page": 1,
-  "per_page": 10
-}
-```
+1. **Rate Limiting**
+   - Implement exponential backoff
+   - Cache responses when possible
+   - Use bulk operations
 
-### AI Insights
+2. **Error Handling**
+   - Handle all error cases
+   - Log error responses
+   - Implement retry logic
 
-#### Get Optimization Recommendations
-
-```http
-GET /insights/recommendations
-```
-
-Get AI-powered optimization recommendations.
-
-**Parameters:**
-```json
-{
-  "resource_id": "string",
-  "recommendation_type": "cost|performance|security",
-  "time_range": "7d|30d|90d"
-}
-```
-
-## Error Handling
-
-The API uses conventional HTTP response codes to indicate the success or failure of requests:
-
-- `200 OK`: Request succeeded
-- `201 Created`: Resource was successfully created
-- `400 Bad Request`: Invalid request parameters
-- `401 Unauthorized`: Missing or invalid authentication
-- `403 Forbidden`: Authentication succeeded but insufficient permissions
-- `404 Not Found`: Resource not found
-- `429 Too Many Requests`: Rate limit exceeded
-- `500 Internal Server Error`: Server error
-
-Error responses follow this format:
-```json
-{
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "Human-readable error message",
-    "details": {
-      "field": "Additional error context"
-    }
-  }
-}
-```
-
-## Rate Limiting
-
-The API implements rate limiting to ensure fair usage:
-
-- 1000 requests per hour per API key
-- 100 requests per minute per IP address
-
-Rate limit headers are included in all responses:
-```http
-X-RateLimit-Limit: 1000
-X-RateLimit-Remaining: 999
-X-RateLimit-Reset: 1706201204
-```
-
-When the rate limit is exceeded, the API will respond with a 429 status code.
-
-## Pagination
-
-List endpoints support pagination using the following query parameters:
-
-- `page`: Page number (default: 1)
-- `per_page`: Items per page (default: 10, max: 100)
-
-Response includes pagination metadata:
-```json
-{
-  "data": [...],
-  "metadata": {
-    "current_page": 1,
-    "per_page": 10,
-    "total_pages": 5,
-    "total_items": 42
-  }
-}
-```
-
-## SDKs and Tools
-
-- Python SDK: [GitHub Repository](https://github.com/cloudpioneer/python-sdk)
-- JavaScript SDK: [GitHub Repository](https://github.com/cloudpioneer/js-sdk)
-- CLI Tool: [GitHub Repository](https://github.com/cloudpioneer/cli)
+3. **Security**
+   - Rotate API keys regularly
+   - Use HTTPS only
+   - Validate webhook signatures
 
 ## Support
 
-For API support, please contact:
-- Email: api-support@cloudpioneer.com
-- Documentation: https://docs.cloudpioneer.com
-- Status Page: https://status.cloudpioneer.com
+For API support:
+1. Check API documentation
+2. Review error messages
+3. Contact API support team
 
 ## Changelog
 
@@ -332,8 +312,3 @@ For API support, please contact:
 - Basic resource management
 - Cost analytics
 - AI insights
-
-### v1.1.0 (2025-01-25)
-- Added schedule management endpoints
-- Improved error handling and rate limiting documentation
-- Added pagination support for list endpoints
