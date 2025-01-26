@@ -1,32 +1,35 @@
 """
 Scheduler package for resource automation
 """
-from .resource_scheduler import ResourceScheduler
+
 from .automation_task import AutomationTask
+from .resource_scheduler import ResourceScheduler
 
 """Resource Scheduler Module"""
-import boto3
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
+
+import boto3
+
 
 class ResourceScheduler:
     """Handles scheduling of resource actions"""
 
     def __init__(self, dynamodb=None):
         """Initialize the scheduler"""
-        self.dynamodb = dynamodb or boto3.resource('dynamodb')
-        self.table = self.dynamodb.Table('cloud_pioneer_schedules')
+        self.dynamodb = dynamodb or boto3.resource("dynamodb")
+        self.table = self.dynamodb.Table("cloud_pioneer_schedules")
 
     def schedule_task(self, resource_id: str, action: str, scheduled_time: str) -> bool:
         """Schedule a task for a resource"""
         try:
             self.table.put_item(
                 Item={
-                    'resource_id': resource_id,
-                    'scheduled_time': scheduled_time,
-                    'action': action,
-                    'status': 'pending',
-                    'created_at': datetime.now(timezone.utc).isoformat()
+                    "resource_id": resource_id,
+                    "scheduled_time": scheduled_time,
+                    "action": action,
+                    "status": "pending",
+                    "created_at": datetime.now(timezone.utc).isoformat(),
                 }
             )
             return True
@@ -38,25 +41,24 @@ class ResourceScheduler:
         """Get status of scheduled tasks for a resource"""
         try:
             response = self.table.query(
-                KeyConditionExpression='resource_id = :rid',
-                ExpressionAttributeValues={':rid': resource_id}
+                KeyConditionExpression="resource_id = :rid",
+                ExpressionAttributeValues={":rid": resource_id},
             )
-            return response.get('Items', [])
+            return response.get("Items", [])
         except Exception as e:
             print(f"Error getting task status: {e}")
             return []
 
-    def update_task_status(self, resource_id: str, scheduled_time: str, status: str) -> bool:
+    def update_task_status(
+        self, resource_id: str, scheduled_time: str, status: str
+    ) -> bool:
         """Update status of a scheduled task"""
         try:
             self.table.update_item(
-                Key={
-                    'resource_id': resource_id,
-                    'scheduled_time': scheduled_time
-                },
-                UpdateExpression='SET #s = :s',
-                ExpressionAttributeNames={'#s': 'status'},
-                ExpressionAttributeValues={':s': status}
+                Key={"resource_id": resource_id, "scheduled_time": scheduled_time},
+                UpdateExpression="SET #s = :s",
+                ExpressionAttributeNames={"#s": "status"},
+                ExpressionAttributeValues={":s": status},
             )
             return True
         except Exception as e:
@@ -68,16 +70,14 @@ class ResourceScheduler:
         try:
             now = datetime.now(timezone.utc).isoformat()
             response = self.table.scan(
-                FilterExpression='#s = :status AND scheduled_time <= :now',
-                ExpressionAttributeNames={'#s': 'status'},
-                ExpressionAttributeValues={
-                    ':status': 'pending',
-                    ':now': now
-                }
+                FilterExpression="#s = :status AND scheduled_time <= :now",
+                ExpressionAttributeNames={"#s": "status"},
+                ExpressionAttributeValues={":status": "pending", ":now": now},
             )
-            return response.get('Items', [])
+            return response.get("Items", [])
         except Exception as e:
             print(f"Error getting pending tasks: {e}")
             return []
 
-__all__ = ['ResourceScheduler', 'AutomationTask']
+
+__all__ = ["ResourceScheduler", "AutomationTask"]

@@ -1,10 +1,13 @@
 """Resource monitor module."""
+
 import logging
-from typing import Dict, Any, List
 from datetime import datetime
+from typing import Any, Dict, List
+
 from src.agent.collectors.resource_metrics import ResourceMetricsCollector
-from src.ml.models.prediction import MetricsPredictor
 from src.automation.scheduler import ResourceScheduler
+from src.ml.models.prediction import MetricsPredictor
+
 
 class ResourceMonitor:
     """Monitors cloud resources and manages their optimization."""
@@ -13,7 +16,7 @@ class ResourceMonitor:
         self,
         metrics_collector: ResourceMetricsCollector = None,
         predictor: MetricsPredictor = None,
-        scheduler: ResourceScheduler = None
+        scheduler: ResourceScheduler = None,
     ):
         """Initialize monitor with collectors and predictors."""
         self.metrics_collector = metrics_collector or ResourceMetricsCollector()
@@ -26,14 +29,14 @@ class ResourceMonitor:
         try:
             metrics = self.metrics_collector.collect_metrics(resource_id)
             metrics_data = {
-                'resource_id': resource_id,
-                'timestamp': datetime.now().isoformat(),
-                'metrics': metrics
+                "resource_id": resource_id,
+                "timestamp": datetime.now().isoformat(),
+                "metrics": metrics,
             }
-            
+
             # Store metrics
             self.predictor.store_metrics(metrics_data)
-            
+
             return metrics_data
         except Exception as e:
             self.logger.error(f"Failed to collect metrics for {resource_id}: {str(e)}")
@@ -53,7 +56,9 @@ class ResourceMonitor:
         try:
             return self.predictor.get_recommendations(resource_id)
         except Exception as e:
-            self.logger.error(f"Failed to get recommendations for {resource_id}: {str(e)}")
+            self.logger.error(
+                f"Failed to get recommendations for {resource_id}: {str(e)}"
+            )
             raise
 
     def schedule_action(self, action: Dict[str, Any]) -> None:
@@ -69,5 +74,7 @@ class ResourceMonitor:
         try:
             return self.scheduler.get_scheduled_actions(resource_id)
         except Exception as e:
-            self.logger.error(f"Failed to get scheduled actions for {resource_id}: {str(e)}")
+            self.logger.error(
+                f"Failed to get scheduled actions for {resource_id}: {str(e)}"
+            )
             raise

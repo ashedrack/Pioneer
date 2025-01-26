@@ -1,11 +1,14 @@
 """
 Kafka manager for handling real-time data streaming.
 """
-from kafka import KafkaProducer, KafkaConsumer
-from kafka.errors import NoBrokersAvailable
-from typing import Dict, Any, Callable, Optional
+
 import json
 import logging
+from typing import Any, Callable, Dict, Optional
+
+from kafka import KafkaConsumer, KafkaProducer
+from kafka.errors import NoBrokersAvailable
+
 
 class KafkaManager:
     def __init__(self, bootstrap_servers: str, client_id: str, testing: bool = False):
@@ -14,12 +17,14 @@ class KafkaManager:
         self.testing = testing
         self.logger = logging.getLogger(__name__)
         self.producer = None
-        
+
         if not testing:
             try:
                 self.producer = self._create_producer()
             except NoBrokersAvailable:
-                self.logger.warning("No Kafka brokers available. Running in degraded mode.")
+                self.logger.warning(
+                    "No Kafka brokers available. Running in degraded mode."
+                )
             except Exception as e:
                 self.logger.error(f"Failed to create Kafka producer: {str(e)}")
         self.consumers = {}
@@ -30,10 +35,10 @@ class KafkaManager:
             return KafkaProducer(
                 bootstrap_servers=self.bootstrap_servers,
                 client_id=self.client_id,
-                value_serializer=lambda v: json.dumps(v).encode('utf-8'),
-                acks='all',
+                value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+                acks="all",
                 retries=3,
-                max_in_flight_requests_per_connection=1
+                max_in_flight_requests_per_connection=1,
             )
         except Exception as e:
             self.logger.error(f"Failed to create Kafka producer: {str(e)}")
@@ -46,8 +51,8 @@ class KafkaManager:
                 topic,
                 bootstrap_servers=self.bootstrap_servers,
                 group_id=group_id,
-                auto_offset_reset='earliest',
-                value_deserializer=lambda x: json.loads(x.decode('utf-8'))
+                auto_offset_reset="earliest",
+                value_deserializer=lambda x: json.loads(x.decode("utf-8")),
             )
             self.consumers[topic] = consumer
             return consumer
@@ -60,9 +65,11 @@ class KafkaManager:
         if self.testing:
             self.logger.info(f"[TEST MODE] Would send to {topic}: {message}")
             return True
-            
+
         if not self.producer:
-            self.logger.warning(f"No Kafka producer available. Message to {topic} not sent.")
+            self.logger.warning(
+                f"No Kafka producer available. Message to {topic} not sent."
+            )
             return False
 
         try:
@@ -79,7 +86,7 @@ class KafkaManager:
         """Consume messages from specified topic with a handler function"""
         if topic not in self.consumers:
             self.create_consumer(topic, f"{self.client_id}-{topic}-group")
-        
+
         consumer = self.consumers[topic]
         try:
             for message in consumer:

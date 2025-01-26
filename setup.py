@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
     name="cloud-pioneer",
@@ -16,7 +16,7 @@ setup(
         "numpy>=1.26.2",
         "scikit-learn==1.3.2",
         "joblib==1.3.2",
-        "kafka-python==2.0.2"
+        "kafka-python==2.0.2",
     ],
     extras_require={
         "test": [
@@ -24,7 +24,7 @@ setup(
             "pytest-asyncio>=0.23.0",
             "pytest-cov>=4.1.0",
             "pytest-mock>=3.12.0",
-            "httpx>=0.25.1"
+            "httpx>=0.25.1",
         ]
-    }
+    },
 )
