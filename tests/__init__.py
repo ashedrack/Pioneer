@@ -1,3 +1,3 @@
 """Test package initialization."""
-from . import test_main
-from . import test_agent
+
+from . import test_agent, test_main
