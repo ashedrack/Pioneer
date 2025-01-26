@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Simple Deployment Pipeline
 
 on:
   push:
@@ -13,24 +13,17 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  AWS_REGION: us-east-1 # Set default region
+  AWS_REGION: us-east-1
 
 permissions:
   contents: read
   packages: write
-  id-token: write # Required for AWS OIDC
+  id-token: write
 
 jobs:
-  build:
-    name: Build and Push Docker Images
+  build-and-deploy:
+    name: Build and Deploy
     runs-on: ubuntu-latest
-    if: >
-      github.event_name == 'push' && 
-      (github.ref == 'refs/heads/main' || 
-       github.ref == 'refs/heads/develop' || 
-       startsWith(github.ref, 'refs/heads/feature/') || 
-       startsWith(github.ref, 'refs/heads/fix/'))
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -45,71 +38,35 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=latest
-            type=ref,event=branch
-            type=sha,format=long
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  deploy-staging:
-    name: Deploy to Staging
-    needs: build
-    runs-on: ubuntu-latest
-    if: >
-      github.event_name == 'push' && 
-      (github.ref == 'refs/heads/develop' || 
-       startsWith(github.ref, 'refs/heads/feature/') || 
-       startsWith(github.ref, 'refs/heads/fix/'))
-    environment: ${{ vars.STAGING_ENV || 'staging' }}
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       - name: Configure AWS Credentials
+        if: github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/main'
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
           audience: sts.amazonaws.com
 
-      - name: Deploy to ECS
+      - name: Deploy to ECS (Staging)
+        if: github.ref == 'refs/heads/staging'
         run: |
-          aws ecs update-service --cluster staging-cluster --service pioneer-service --force-new-deployment
+          aws ecs update-service \
+            --cluster staging-cluster \
+            --service pioneer-service \
+            --force-new-deployment
 
-# Production deployment commented out for now
-# deploy-production:
-#   name: Deploy to Production
-#   needs: build
-#   runs-on: ubuntu-latest
-#   if: github.ref == 'refs/heads/main'
-#   environment: ${{ vars.PRODUCTION_ENV || 'production' }}
-#   
-#   steps:
-#     - name: Checkout code
-#       uses: actions/checkout@v3
-#
-#     - name: Configure AWS Credentials
-#       uses: aws-actions/configure-aws-credentials@v2
-#       with:
-#         role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-#         aws-region: ${{ env.AWS_REGION }}
-#         audience: sts.amazonaws.com
-#
-#     - name: Deploy to ECS
-#       run: |
-#         aws ecs update-service --cluster production-cluster --service pioneer-service --force-new-deployment
+      # - name: Deploy to ECS (Production)
+      #   if: github.ref == 'refs/heads/main'
+      #   run: |
+      #     aws ecs update-service \
+      #       --cluster production-cluster \
+      #       --service pioneer-service \
+      #       --force-new-deployment
