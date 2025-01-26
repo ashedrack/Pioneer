@@ -1,345 +1,252 @@
 # CloudPioneer Technical Documentation
 
-> **Important**: This documentation is for a private repository. Please ensure you have proper access rights before proceeding.
-
 ## Table of Contents
-1. [System Overview](#system-overview)
+1. [Platform Overview](#platform-overview)
 2. [Architecture](#architecture)
-3. [Components](#components)
-4. [Setup Guide](#setup-guide)
+3. [Security & Compliance](#security--compliance)
+4. [Multi-tenant Architecture](#multi-tenant-architecture)
 5. [API Reference](#api-reference)
-6. [Dashboard Guide](#dashboard-guide)
-7. [ML Model Documentation](#ml-model-documentation)
-8. [Security](#security)
-9. [Monitoring & Logging](#monitoring--logging)
-10. [Troubleshooting](#troubleshooting)
-11. [Technical Documentation Updates](#technical-documentation-updates)
+6. [Agent Installation](#agent-installation)
+7. [Monitoring & Logging](#monitoring--logging)
+8. [Scaling & Performance](#scaling--performance)
+9. [Enterprise Features](#enterprise-features)
+10. [Integration Guide](#integration-guide)
+11. [Troubleshooting](#troubleshooting)
 
-## System Overview
+## Platform Overview
 
-CloudPioneer is an AI-powered cloud resource optimization platform that helps organizations reduce cloud costs and improve resource efficiency. The system uses machine learning to predict resource usage patterns and automate resource management decisions.
+CloudPioneer is an enterprise-grade SaaS platform for intelligent cloud resource optimization. Built for scale, it helps organizations of all sizes optimize their cloud infrastructure through AI-powered insights and automated management.
 
 ### Key Features
+- One-click agent deployment
 - Real-time resource monitoring
-- AI-powered usage prediction
-- Automated resource scheduling
-- Cost optimization
+- AI-powered optimization
 - Multi-cloud support
-- Interactive visualization dashboard
+- Enterprise security
+- Custom branding options
+- API access with SDKs
+- Advanced analytics
 
 ## Architecture
 
 ### High-Level Architecture
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Cloud Agents  │ ──► │  Kafka Stream   │ ──► │ Stream Processor│
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-                                                         │
-┌─────────────────┐     ┌─────────────────┐            ▼
-│    Frontend     │ ◄─► │   API Server    │ ◄─► ┌─────────────────┐
-└─────────────────┘     └─────────────────┘     │    Database     │
-                                                └─────────────────┘
-                                                         ▲
-┌─────────────────┐     ┌─────────────────┐            │
-│    ML Models    │ ◄─► │  Task Scheduler │ ───────────┘
-└─────────────────┘     └─────────────────┘
+                                     ┌─────────────────┐
+                                     │   Load Balancer │
+                                     └────────┬────────┘
+                                              │
+                 ┌──────────────────────────┬─┴─┬──────────────────────────┐
+                 │                          │   │                          │
+         ┌───────┴───────┐          ┌──────┴───┴──────┐          ┌───────┴───────┐
+         │  API Cluster  │          │  Web Cluster    │          │ Agent Gateway  │
+         └───────┬───────┘          └──────┬───┬──────┘          └───────┬───────┘
+                 │                          │   │                          │
+         ┌───────┴───────┐          ┌──────┴───┴──────┐          ┌───────┴───────┐
+         │ Service Mesh  │          │  Cache Layer    │          │ Stream Process │
+         └───────┬───────┘          └──────┬───┬──────┘          └───────┬───────┘
+                 │                          │   │                          │
+    ┌────────────┴────────────┬────────────┴───┴────────────┬────────────┴────────────┐
+    │                         │                              │                         │
+┌───┴────┐             ┌─────┴─────┐                  ┌─────┴─────┐             ┌────┴───┐
+│ ML/AI  │             │  Database  │                  │  Message  │             │ Metrics │
+│Cluster │             │  Cluster   │                  │  Queue    │             │ Store   │
+└────────┘             └───────────┘                  └───────────┘             └────────┘
 ```
 
 ### Technology Stack
-- **Frontend**: React, Material-UI, Nivo Charts
-- **Backend**: FastAPI, PostgreSQL
-- **ML**: TensorFlow, scikit-learn
-- **Streaming**: Apache Kafka
-- **Monitoring**: Prometheus, Grafana
-- **Infrastructure**: Docker, Kubernetes
+- **Infrastructure**: AWS, GCP, Azure
+- **Container Orchestration**: Kubernetes
+- **Service Mesh**: Istio
+- **API Gateway**: Kong
+- **Database**: PostgreSQL (Multi-tenant)
+- **Cache**: Redis Cluster
+- **Message Queue**: Apache Kafka
+- **Metrics**: Prometheus, InfluxDB
+- **ML Platform**: TensorFlow, Kubeflow
+- **Monitoring**: Grafana, ELK Stack
+- **CDN**: Cloudflare
+- **Security**: Vault, Cert-Manager
 
-## Components
+## Security & Compliance
 
-### 1. Resource Monitoring Agent
-Location: `src/agent/collectors/`
-- Collects system metrics (CPU, memory, disk, network)
-- Supports multiple cloud providers
-- Secure data transmission
-- Configurable collection intervals
+### Data Security
+- End-to-end encryption (AES-256)
+- Data isolation per tenant
+- Regular security audits
+- Automated vulnerability scanning
 
-### 2. ML Prediction Engine
-Location: `src/ml/models/`
-- Resource usage prediction
-- Anomaly detection
-- Continuous learning
-- Model versioning
+### Compliance
+- SOC 2 Type II certified
+- GDPR compliant
+- ISO 27001 certified
+- HIPAA ready
 
-### 3. Resource Scheduler
-Location: `src/automation/scheduler/`
-- Automated resource management
-- Schedule optimization
-- Override mechanisms
-- Failure handling
+### Authentication & Authorization
+- Multi-factor authentication
+- RBAC (Role-Based Access Control)
+- SSO integration (SAML, OIDC)
+- API key management
 
-### 4. API Server
-Location: `src/api/`
-- RESTful endpoints
-- Authentication & authorization
-- Rate limiting
-- Request validation
+## Multi-tenant Architecture
 
-### 5. Dashboard
-Location: `frontend/src/`
-- Resource metrics visualization
-- Cost analytics
-- AI insights
-- Action management
+### Tenant Isolation
+- Dedicated database schemas per tenant
+- Isolated Kubernetes namespaces
+- Separate encryption keys
+- Resource quotas
 
-## Setup Guide
-
-### Prerequisites
-- Python 3.9+
-- Node.js and npm (for frontend)
-- PostgreSQL (optional, if not using Docker)
-- Docker and Docker Compose (optional, for containerized setup)
-
-### Option 1: Docker Setup
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/cloud-pioneer.git
-   ```
-
-2. Copy environment variables:
-   ```bash
-   cp .env.example .env
-   ```
-
-3. Build and start services:
-   ```bash
-   docker compose up --build
-   ```
-
-The application will be available at:
-- Backend API: http://localhost:8000
-- Frontend: http://localhost:3000
-- API Documentation: http://localhost:8000/docs
-
-### Option 2: Local Development Setup
-
-#### Backend Setup
-
-1. Create and activate virtual environment:
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
-
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. Copy environment variables:
-   ```bash
-   cp .env.example .env
-   ```
-
-4. Start the backend server:
-   ```bash
-   python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
-   ```
-
-#### Frontend Setup
-
-1. Navigate to frontend directory:
-   ```bash
-   cd frontend
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Start development server:
-   ```bash
-   npm start
-   ```
-
-The application will be available at the same addresses as the Docker setup.
-
-### Additional Services
-For full functionality, the following services need to be running:
-- PostgreSQL database
-- Redis for caching
-- Kafka for message queuing
-
-Refer to the deployment guide for setting up these services locally.
+### Data Partitioning
+- Tenant-specific data stores
+- Sharded databases
+- Isolated cache instances
+- Separate backup policies
 
 ## API Reference
+
+### Authentication
+```http
+POST /api/v1/auth/login
+POST /api/v1/auth/refresh
+POST /api/v1/auth/logout
+```
 
 ### Resource Management
 ```http
 GET /api/v1/resources/metrics
-POST /api/v1/resources/schedule
-GET /api/v1/resources/recommendations
+POST /api/v1/resources/optimize
+GET /api/v1/resources/forecast
 ```
 
-### Cost Analytics
+### Team Management
 ```http
-GET /api/v1/resources/costs
-GET /api/v1/resources/savings
+GET /api/v1/teams
+POST /api/v1/teams/{teamId}/members
+PUT /api/v1/teams/{teamId}/roles
 ```
 
-### AI Insights
+### Billing & Usage
 ```http
-GET /api/v1/resources/insights
-GET /api/v1/resources/predictions
+GET /api/v1/billing/usage
+GET /api/v1/billing/invoices
+POST /api/v1/billing/subscribe
 ```
 
-## Dashboard Guide
+## Agent Installation
 
-### Resource Metrics
-- Real-time CPU and memory usage
-- Network and disk I/O
-- Custom time ranges
-- Export capabilities
-
-### Cost Analytics
-- Cost distribution by service
-- Savings trends
-- Budget tracking
-- ROI analysis
-
-### AI Insights
-- Usage pattern heatmap
-- Prediction accuracy metrics
-- Resource optimization recommendations
-- Model performance tracking
-
-### Scheduled Actions
-- Action management table
-- Status tracking
-- Override controls
-- Audit logging
-
-## ML Model Documentation
-
-### Prediction Model
-- Architecture: LSTM neural network
-- Input features: Resource metrics time series
-- Output: Resource usage predictions
-- Training frequency: Daily
-- Accuracy metrics: MAE, RMSE
-
-### Model Training
-```python
-# Example training code
-from src.ml.models.prediction import ResourcePredictor
-
-predictor = ResourcePredictor()
-predictor.train(training_data, epochs=100)
+### One-Line Installation
+```bash
+curl -fsSL https://install.cloudpioneer.com | bash -s -- --api-key YOUR_API_KEY
 ```
 
-## Security
+### Container Installation
+```bash
+docker run -d \
+  --name cloudpioneer-agent \
+  -e API_KEY=YOUR_API_KEY \
+  cloudpioneer/agent:latest
+```
 
-### Repository Access
-- This is a private repository with restricted access
-- Access is managed through GitHub organization permissions
-- Contact repository administrators for access requests
-
-### Authentication & Authorization
-- JWT-based authentication for API access
-- Role-based access control (RBAC) for different user levels
-- Secure credential storage using environment variables
-- Regular token rotation and expiration policies
-
-### Data Security
-- All sensitive data must be stored in encrypted form
-- API keys and credentials should never be committed to the repository
-- Use `.env` files for local development (not tracked in git)
-- Production secrets should be managed through secure secret management services
-
-### Compliance
-- Regular security audits
-- Automated vulnerability scanning
-- Dependency version monitoring
-- Access logging and audit trails
-
-### Authentication
-- OAuth2 implementation
-- JWT tokens
-- Role-based access control
-- API key management
-
-### Data Protection
-- TLS encryption
-- Data anonymization
-- Audit logging
-- Compliance tracking
+### Kubernetes Installation
+```bash
+kubectl apply -f https://install.cloudpioneer.com/kubernetes/agent.yaml
+```
 
 ## Monitoring & Logging
 
 ### Metrics Collection
-- System metrics
-- Application metrics
-- Business metrics
+- Resource utilization
+- Performance metrics
+- Cost analytics
 - Custom metrics
 
-### Logging
-- Centralized logging
+### Logging System
+- Structured logging
+- Log aggregation
+- Real-time streaming
 - Log retention policies
-- Log analysis
-- Alert configuration
 
 ### Alerting
-- Threshold-based alerts
-- Anomaly detection
-- Alert channels
-- Escalation policies
+- Custom alert rules
+- Multiple channels
+- Alert aggregation
+- Incident management
+
+## Scaling & Performance
+
+### Infrastructure Scaling
+- Auto-scaling groups
+- Regional deployment
+- Load balancing
+- CDN integration
+
+### Database Scaling
+- Read replicas
+- Connection pooling
+- Query optimization
+- Automated backups
+
+### Caching Strategy
+- Multi-layer caching
+- Cache invalidation
+- Cache warming
+- Redis clustering
+
+## Enterprise Features
+
+### White Labeling
+- Custom domain
+- Brand customization
+- Custom email templates
+- Themed dashboards
+
+### Integration Options
+- REST APIs
+- GraphQL API
+- Webhooks
+- SDKs (Python, Node.js, Go)
+
+### Advanced Analytics
+- Custom reports
+- Data export
+- BI integration
+- Trend analysis
+
+## Integration Guide
+
+### API Integration
+- Authentication
+- Rate limiting
+- Webhook setup
+- Error handling
+
+### SSO Integration
+- SAML configuration
+- OIDC setup
+- Active Directory
+- Custom providers
+
+### Cloud Provider Integration
+- AWS
+- Google Cloud
+- Azure
+- Custom providers
 
 ## Troubleshooting
 
 ### Common Issues
-1. Connection Issues
-   ```bash
-   # Check service status
-   docker-compose ps
-   
-   # View logs
-   docker-compose logs -f service_name
-   ```
+- Agent connectivity
+- Authentication errors
+- API rate limits
+- Performance issues
 
-2. Performance Issues
-   - Check resource usage
-   - Monitor database queries
-   - Review API latency
-   - Analyze ML model performance
+### Debugging Tools
+- Agent diagnostics
+- API debugging
+- Log analysis
+- Metrics explorer
 
-### Health Checks
-```bash
-# API health check
-curl http://localhost:8000/health
-
-# Database health check
-docker-compose exec db pg_isready
-
-# Kafka health check
-docker-compose exec kafka kafka-topics.sh --list --bootstrap-server localhost:9092
-```
-
-### Support
-For additional support:
-1. Check the issue tracker
-2. Review the FAQ
-3. Contact the development team
-
-## Contributing
-Please read CONTRIBUTING.md for details on our code of conduct and the process for submitting pull requests.
-
-## Technical Documentation Updates
-
-### New Features
-- Support for additional cloud environments (AWS, GCP, Azure).
-- Enhanced monitoring capabilities through new cloud agents.
-- Improved data transmission and buffering mechanisms.
-
-### Architecture Changes
-- Updated system architecture to include new agents and processing layers.
-- Enhanced data collection and storage mechanisms for better performance.
+### Support Channels
+- Enterprise support
+- Documentation
+- Community forums
+- Training resources
