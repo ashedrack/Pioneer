@@ -33,31 +33,153 @@ services:
       - cloud-pioneer-network
 
   kafka:
-    image: confluentinc/cp-kafka:7.0.0
-    environment:
-      - KAFKA_BROKER_ID=1
-      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
-      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+    image: confluentinc/cp-kafka:7.3.0
+    hostname: kafka
+    container_name: kafka
     depends_on:
       - zookeeper
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      # Core Configuration
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      
+      # Performance Tuning
+      KAFKA_MESSAGE_MAX_BYTES: 20971520        # 20MB
+      KAFKA_REPLICA_FETCH_MAX_BYTES: 20971520  # 20MB
+      KAFKA_MAX_REQUEST_SIZE: 20971520         # 20MB
+      KAFKA_SOCKET_REQUEST_MAX_BYTES: 20971520 # 20MB
+      KAFKA_SOCKET_SEND_BUFFER_BYTES: 20971520 # 20MB
+      KAFKA_SOCKET_RECEIVE_BUFFER_BYTES: 20971520 # 20MB
+      KAFKA_MAX_PARTITION_FETCH_BYTES: 20971520 # 20MB
+      
+      # Producer Optimizations
+      KAFKA_COMPRESSION_TYPE: gzip
+      KAFKA_MESSAGE_TIMESTAMP_TYPE: LogAppendTime
+      
+      # Topic Configuration
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_DELETE_TOPIC_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      
+      # Log Configuration
+      KAFKA_LOG_RETENTION_HOURS: 24
+      KAFKA_LOG_RETENTION_BYTES: 2684354560  # 2.5GB
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824    # 1GB
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000
+      
+      # Network Configuration
+      KAFKA_NUM_NETWORK_THREADS: 3
+      KAFKA_NUM_IO_THREADS: 8
+      KAFKA_QUEUED_MAX_REQUESTS: 500
+      
+      # Transaction Configuration
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      
+      # Detailed Logging
+      KAFKA_LOG4J_LOGGERS: >-
+        kafka.controller=INFO,
+        kafka.producer.async.DefaultEventHandler=INFO,
+        state.change.logger=INFO,
+        kafka.cluster=DEBUG,
+        kafka.log=DEBUG,
+        kafka.network=DEBUG,
+        kafka.server=DEBUG,
+        kafka.zookeeper=DEBUG
+      KAFKA_TOOLS_LOG4J_LOGLEVEL: DEBUG
+      
+      # JMX Monitoring
+      KAFKA_JMX_OPTS: >-
+        -Dcom.sun.management.jmxremote
+        -Dcom.sun.management.jmxremote.authenticate=false
+        -Dcom.sun.management.jmxremote.ssl=false
+        -Djava.rmi.server.hostname=kafka
+        -Dcom.sun.management.jmxremote.rmi.port=9999
+      JMX_PORT: 9999
+      
+      # Heap Configuration
+      KAFKA_HEAP_OPTS: "-Xmx2G -Xms2G"
+      
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+      - kafka_logs:/var/lib/kafka/logs
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
     networks:
       - cloud-pioneer-network
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.0.0
+    image: confluentinc/cp-zookeeper:7.3.0
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+      - "2888:2888"
+      - "3888:3888"
     environment:
-      - ZOOKEEPER_CLIENT_PORT=2181
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 10
+      ZOOKEEPER_SYNC_LIMIT: 5
+      ZOOKEEPER_JUTE_MAXBUFFER: 20971520  # Increased to 20MB
+      ZOOKEEPER_MAX_CLIENT_CNXNS: 0
+      ZOOKEEPER_MAX_SESSION_TIMEOUT: 40000
+      ZOOKEEPER_MIN_SESSION_TIMEOUT: 4000
+      ZOOKEEPER_AUTOPURGE_PURGEINTERVAL: 1
+      ZOOKEEPER_AUTOPURGE_SNAPRETAINCOUNT: 3
+      ZOOKEEPER_HEAP_OPTS: "-Xmx1G -Xms1G"
+      # Detailed logging configuration
+      ZOOKEEPER_LOG4J_ROOT_LOGLEVEL: INFO
+      ZOOKEEPER_TOOLS_LOG4J_LOGLEVEL: INFO
+      KAFKA_OPTS: >-
+        -Dzookeeper.slf4j.verbosity=DEBUG
+        -Dlog4j.debug=true
+        -Dzookeeper.clientCnxnSocket=org.apache.zookeeper.ClientCnxnSocketNetty
+        -Dzookeeper.admin.enableServer=true
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
     networks:
       - cloud-pioneer-network
 
   redis:
     image: redis:6.2
-    command: redis-server --requirepass cloudpioneer
+    command: redis-server --requirepass cloudpioneer --maxmemory 1gb --maxmemory-policy allkeys-lru
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 1.5G
+        reservations:
+          memory: 1G
     networks:
       - cloud-pioneer-network
 
@@ -65,12 +187,22 @@ services:
     image: prom/prometheus:v2.30.3
     volumes:
       - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./config/alert.rules:/etc/prometheus/alert.rules
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
     ports:
       - "9090:9090"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
     networks:
       - cloud-pioneer-network
 
@@ -78,14 +210,64 @@ services:
     image: grafana/grafana:8.2.0
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=cloudpioneer
-    ports:
-      - "3000:3000"
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource,grafana-piechart-panel
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_SECURITY_ALLOW_EMBEDDING=true
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+      - ./config/grafana/dashboards:/var/lib/grafana/dashboards
+    ports:
+      - "3000:3000"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
     depends_on:
       - prometheus
     networks:
       - cloud-pioneer-network
+
+  node-exporter:
+    image: prom/node-exporter:v1.2.2
+    container_name: node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
+    networks:
+      - cloud-pioneer-network
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.27.0
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+      - REDIS_PASSWORD=cloudpioneer
+    ports:
+      - "9121:9121"
+    networks:
+      - cloud-pioneer-network
+    depends_on:
+      - redis
+
+  postgres-exporter:
+    image: wrouesnel/postgres_exporter:v0.8.0
+    environment:
+      - DATA_SOURCE_NAME=postgresql://postgres:cloudpioneer@db:5432/cloudpioneer?sslmode=disable
+    ports:
+      - "9187:9187"
+    networks:
+      - cloud-pioneer-network
+    depends_on:
+      - db
 
   frontend:
     build:
@@ -95,17 +277,28 @@ services:
       - "3001:3000"
     environment:
       - REACT_APP_API_URL=http://localhost:8000/api/v1
+      - NODE_ENV=development
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
     depends_on:
       - api
     networks:
       - cloud-pioneer-network
 
-volumes:
-  postgres_data:
-  redis_data:
-  prometheus_data:
-  grafana_data:
-
 networks:
   cloud-pioneer-network:
     driver: bridge
+
+volumes:
+  postgres_data:
+  kafka_data:
+  kafka_logs:
+  zookeeper_data:
+  zookeeper_logs:
+  redis_data:
+  prometheus_data:
+  grafana_data:

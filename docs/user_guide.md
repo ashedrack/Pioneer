@@ -1,220 +1,244 @@
 # CloudPioneer User Guide
 
-## Introduction
+Welcome to CloudPioneer! This guide will help you get started with our cloud resource optimization platform and make the most of its features.
 
-Welcome to CloudPioneer, your AI-powered cloud resource optimization platform. This guide will help you get started with the platform and make the most of its features.
+## Table of Contents
+1. [Getting Started](#getting-started)
+2. [Dashboard Overview](#dashboard-overview)
+3. [Resource Management](#resource-management)
+4. [Cost Optimization](#cost-optimization)
+5. [Team Management](#team-management)
+6. [Billing & Usage](#billing--usage)
+7. [Security & Compliance](#security--compliance)
+8. [Enterprise Features](#enterprise-features)
+9. [Integrations](#integrations)
+10. [Support](#support)
 
 ## Getting Started
 
-### System Requirements
-- Modern web browser (Chrome, Firefox, Safari, or Edge)
-- Internet connection for external cloud resource monitoring
+### Account Setup
+1. Visit [https://app.cloudpioneer.com/signup](https://app.cloudpioneer.com/signup)
+2. Choose your subscription plan (Free, Professional, or Enterprise)
+3. Complete the registration process
+4. Verify your email address
+5. Set up multi-factor authentication (recommended)
 
-### Accessing the Dashboard
+### Installing the Agent
+Choose your preferred installation method:
 
-1. Open your web browser and navigate to http://localhost:3000
-2. Log in using one of the following methods:
-   - Email/Password
-   - Google OAuth
-3. You'll be presented with the main dashboard
+#### One-Line Installation
+```bash
+curl -fsSL https://install.cloudpioneer.com | bash -s -- --api-key YOUR_API_KEY
+```
 
+#### Docker Installation
+```bash
+docker run -d \
+  --name cloudpioneer-agent \
+  -e API_KEY=YOUR_API_KEY \
+  cloudpioneer/agent:latest
+```
 
-### Common Setup Issues
+#### Kubernetes Installation
+```bash
+kubectl apply -f https://install.cloudpioneer.com/kubernetes/agent.yaml
+```
 
-1. **API Connection Error**
-   - Ensure the backend server is running on port 8000
-   - Check your .env configuration
-   - Verify network connectivity
+## Dashboard Overview
 
-2. **Authentication Issues**
-   - Clear browser cookies and cache
-   - Ensure Google OAuth credentials are properly configured
-   - Check for valid JWT token
+### Navigation
+- **Overview**: High-level metrics and insights
+- **Resources**: Detailed resource management
+- **Costs**: Cost analysis and optimization
+- **Team**: Team member management
+- **Settings**: Account and platform settings
 
-3. **Data Loading Issues**
-   - Verify database connection
-   - Check Kafka service status
-   - Ensure proper permissions are set
+### Key Metrics
+- Resource utilization
+- Cost trends
+- Optimization opportunities
+- Performance indicators
+- Security status
 
-### Dashboard Overview
+## Resource Management
 
+### Viewing Resources
+1. Navigate to the Resources page
+2. Use filters to find specific resources
+3. Click on a resource for detailed metrics
+4. View historical data and trends
 
-The dashboard is divided into four main sections:
+### Resource Actions
+- Start/Stop resources
+- Schedule automated actions
+- Set up alerts
+- Configure monitoring
+- Apply tags
 
-1. **Resource Metrics**
-   - View real-time resource utilization
-   - Monitor CPU, memory, network, and disk usage
-   - Customize time ranges and metrics display
+### Batch Operations
+1. Select multiple resources
+2. Choose action from the toolbar
+3. Confirm and execute
 
-2. **Cost Analytics**
-   - Track cloud spending by service
-   - View cost optimization opportunities
-   - Monitor savings trends
+## Cost Optimization
 
-3. **AI Insights**
-   - View resource usage patterns
-   - See optimization recommendations
-   - Monitor prediction accuracy
+### Cost Analysis
+- View cost breakdown by service
+- Track spending trends
+- Set budget alerts
+- Generate cost reports
 
-4. **Resource Management**
-   - View and manage scheduled actions
-   - Override automated decisions
-   - Track action history
+### Optimization Recommendations
+- AI-powered suggestions
+- Estimated savings
+- Implementation risk
+- One-click application
 
-## Features in Detail
+### Budget Management
+1. Set budget thresholds
+2. Configure alerts
+3. Track spending
+4. Export reports
 
-### Resource Monitoring
+## Team Management
 
-#### Viewing Resource Metrics
-1. Navigate to the Resource Metrics section
-2. Select the time range using the date picker
-3. Hover over graphs for detailed metrics
-4. Use the zoom controls for detailed views
+### Adding Team Members
+1. Go to Team Settings
+2. Click "Add Member"
+3. Enter email address
+4. Assign role and permissions
+5. Send invitation
 
-#### Customizing Views
-1. Click the "Customize" button
-2. Select metrics to display
-3. Choose visualization type
-4. Save your preferences
+### Role Management
+- **Admin**: Full access
+- **Manager**: Resource and team management
+- **Viewer**: Read-only access
+- **Custom Roles**: Enterprise feature
 
-### Cost Management
+### Access Control
+- Role-based access
+- Resource-level permissions
+- API key management
+- Audit logging
 
-#### Analyzing Costs
-1. Navigate to Cost Analytics
-2. View cost distribution pie chart
-3. Check savings trend line graph
-4. Export reports as needed
+## Billing & Usage
 
-#### Setting Budgets
-1. Click "Budget Settings"
-2. Set monthly budget limits
-3. Configure alert thresholds
-4. Save settings
+### Subscription Management
+1. View current plan
+2. Compare plans
+3. Upgrade/downgrade
+4. Update billing information
 
-### AI-Powered Optimization
+### Usage Monitoring
+- Resource usage metrics
+- API call volume
+- Storage consumption
+- Feature utilization
 
-#### Viewing Predictions
-1. Check the AI Insights panel
-2. View the usage pattern heatmap
-3. Check prediction accuracy metrics
-4. Review optimization recommendations
+### Invoices
+- Download invoices
+- View payment history
+- Update payment method
+- Set billing alerts
 
-#### Managing Automated Actions
-1. Go to Resource Management
-2. View scheduled actions
-3. Approve or override decisions
-4. Track action outcomes
+## Security & Compliance
 
-## Best Practices
+### Security Features
+- Multi-factor authentication
+- Single sign-on (SSO)
+- IP allowlisting
+- Audit logs
 
-### Resource Optimization
+### Compliance
+- SOC 2 Type II
+- GDPR
+- ISO 27001
+- HIPAA ready
 
-1. **Regular Monitoring**
-   - Check the dashboard daily
-   - Review AI insights weekly
-   - Analyze cost trends monthly
+### Best Practices
+1. Enable MFA for all users
+2. Regular security reviews
+3. Monitor audit logs
+4. Rotate API keys
 
-2. **Action Management**
-   - Review scheduled actions
-   - Set appropriate override policies
-   - Document manual interventions
+## Enterprise Features
 
-3. **Cost Control**
-   - Set realistic budgets
-   - Monitor spending trends
-   - Act on cost-saving recommendations
+### White Labeling
+1. Custom domain setup
+2. Logo customization
+3. Color scheme
+4. Email templates
 
-### Security
+### Advanced Analytics
+- Custom dashboards
+- Report builder
+- Data export
+- BI integration
 
-1. **Access Management**
-   - Use strong passwords
-   - Enable 2FA if available
-   - Regular credential rotation
+### Priority Support
+- 24/7 support
+- Dedicated account manager
+- Training sessions
+- Priority issue resolution
 
-2. **Data Protection**
-   - Follow data handling policies
-   - Review audit logs
-   - Report security concerns
+## Integrations
 
-## Troubleshooting
+### Available Integrations
+- Slack
+- Microsoft Teams
+- Jira
+- ServiceNow
+- Custom webhooks
 
-### Common Issues
+### Setting Up Integrations
+1. Go to Integrations page
+2. Select integration
+3. Configure settings
+4. Test connection
+5. Enable integration
 
-1. **Dashboard Not Loading**
-   - Check internet connection
-   - Clear browser cache
-   - Verify service status
+### API Access
+- Generate API keys
+- View documentation
+- Monitor usage
+- Set rate limits
 
-2. **Metrics Not Updating**
-   - Check agent status
-   - Verify data collection
-   - Contact support if persistent
+## Support
 
-3. **Actions Not Executing**
-   - Check permissions
-   - Verify resource access
-   - Review error logs
+### Documentation
+- [API Documentation](https://docs.cloudpioneer.com/api)
+- [Knowledge Base](https://docs.cloudpioneer.com/kb)
+- [Video Tutorials](https://docs.cloudpioneer.com/tutorials)
+- [Best Practices](https://docs.cloudpioneer.com/best-practices)
 
 ### Getting Help
+- Email: support@cloudpioneer.com
+- Live Chat: Available in dashboard
+- Phone: Enterprise customers only
+- Community Forum: [community.cloudpioneer.com](https://community.cloudpioneer.com)
 
-1. **Support Channels**
-   - In-app help center
-   - Documentation
-   - Support tickets
-   - Community forums
+### Training
+- Onboarding sessions
+- Weekly webinars
+- Custom training (Enterprise)
+- Certification program
 
-2. **Reporting Issues**
-   - Provide error messages
-   - Include timestamps
-   - Describe expected behavior
+## Tips & Tricks
 
-## Tips and Tricks
+### Optimization
+1. Use tags for better organization
+2. Set up automated scheduling
+3. Enable cost anomaly detection
+4. Review weekly optimization reports
 
-### Dashboard Customization
-- Use saved views for quick access
-- Set up custom alerts
-- Configure default views
+### Performance
+1. Configure alert thresholds
+2. Use batch operations
+3. Enable caching
+4. Optimize API usage
 
-### Cost Optimization
-- Review AI recommendations regularly
-- Set up cost anomaly detection
-- Use tagging for better tracking
-
-### Resource Management
-- Set up resource groups
-- Use templates for common actions
-- Configure maintenance windows
-
-## Glossary
-
-- **Resource Utilization**: Measure of resource usage
-- **Cost Analytics**: Analysis of cloud spending
-- **AI Insights**: ML-based recommendations
-- **Scheduled Actions**: Automated resource management
-- **Override**: Manual intervention in automated decisions
-
-## Updates and Maintenance
-
-### Platform Updates
-- Regular feature updates
-- Security patches
-- Performance improvements
-
-### Maintenance Windows
-- Scheduled maintenance
-- Update notifications
-- Service impact details
-
-## Feedback and Support
-
-### Providing Feedback
-1. Use the feedback form
-2. Join user research
-3. Participate in surveys
-
-### Getting Support
-1. Check documentation
-2. Contact support team
-3. Join community forums
-
-Remember to check this guide regularly for updates and new features. For technical details, refer to the technical documentation.
+### Security
+1. Regular access reviews
+2. Monitor audit logs
+3. Implement least privilege
+4. Use SSO when possible
