@@ -17,8 +17,8 @@ resource "aws_ecs_task_definition" "app" {
   family                   = "pioneer-task"
   requires_compatibilities = ["FARGATE"]
   network_mode            = "awsvpc"
-  cpu                     = 256
-  memory                  = 512
+  cpu                     = 512
+  memory                  = 1024
   execution_role_arn      = aws_iam_role.ecs_execution_role.arn
   task_role_arn           = aws_iam_role.ecs_task_role.arn
 
@@ -36,6 +36,25 @@ resource "aws_ecs_task_definition" "app" {
         }
       ]
 
+      environment = [
+        {
+          name  = "ENVIRONMENT"
+          value = "staging"
+        },
+        {
+          name  = "PORT"
+          value = "8000"
+        }
+      ]
+
+      healthCheck = {
+        command     = ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+        interval    = 30
+        timeout     = 5
+        retries     = 3
+        startPeriod = 60
+      }
+
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -48,7 +67,8 @@ resource "aws_ecs_task_definition" "app" {
   ])
 
   tags = {
-    Name = "pioneer-task"
+    Name        = "pioneer-task"
+    Environment = "staging"
   }
 }
 
@@ -153,17 +173,34 @@ resource "aws_ecs_service" "app" {
   name            = "pioneer-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.app.arn
-  desired_count   = 1
+  desired_count   = 2  # Running two instances for high availability
   launch_type     = "FARGATE"
 
+  deployment_controller {
+    type = "ECS"
+  }
+
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
+  deployment_maximum_percent         = 200
+  deployment_minimum_healthy_percent = 100
+
   network_configuration {
-    subnets         = aws_subnet.public[*].id
-    security_groups = [aws_security_group.ecs_tasks.id]
+    subnets          = aws_subnet.public[*].id
+    security_groups  = [aws_security_group.ecs_tasks.id]
     assign_public_ip = true
   }
 
+  lifecycle {
+    ignore_changes = [task_definition]
+  }
+
   tags = {
-    Name = "pioneer-service"
+    Name        = "pioneer-service"
+    Environment = "staging"
   }
 }
 
