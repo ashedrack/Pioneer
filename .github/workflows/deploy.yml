@@ -56,18 +56,43 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
       - name: Download and clean task definition
         run: |
           # Download the task definition
           aws ecs describe-task-definition \
             --task-definition ${{ env.ECS_TASK_DEFINITION }} \
-            --query taskDefinition > task-definition-full.json
+            --query 'taskDefinition' > task-definition-full.json
 
-          # Remove invalid properties using jq
-          jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | (.containerDefinitions[] | del(.enableFaultInjection))' task-definition-full.json > task-definition.json
-          
+          # Debug: Show the downloaded task definition
+          echo "Downloaded task definition:"
+          cat task-definition-full.json
+
+          # Extract and clean the container definitions
+          jq '{
+            family: .family,
+            networkMode: .networkMode,
+            containerDefinitions: [.containerDefinitions[] | del(.enableFaultInjection)],
+            executionRoleArn: .executionRoleArn,
+            taskRoleArn: .taskRoleArn,
+            cpu: .cpu,
+            memory: .memory,
+            requiresCompatibilities: ["FARGATE"]
+          }' task-definition-full.json > task-definition.json
+
+          # Debug: Show the cleaned task definition
           echo "Cleaned task definition:"
           cat task-definition.json
+
+          # Validate containerDefinitions array
+          if ! jq -e 'has("containerDefinitions")' task-definition.json > /dev/null; then
+            echo "Error: Missing containerDefinitions array"
+            exit 1
+          fi
 
       - name: Update ECS task definition
         id: task-def
