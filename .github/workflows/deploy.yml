@@ -61,8 +61,8 @@ jobs:
 
       - name: Configure AWS Credentials
         if: github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/main'
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-          audience: sts.amazonaws.com
+          role-session-name: GithubActionsSession
