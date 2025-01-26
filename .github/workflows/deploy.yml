@@ -6,6 +6,7 @@ on:
       - main
       - develop
       - 'feature/**'
+      - 'fix/**'
   pull_request:
     branches:
       - main
@@ -14,11 +15,12 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  AWS_REGION: us-east-1 # Set default region
 
 permissions:
   contents: read
   packages: write
-  id-token: write # Required for AWS actions if using OIDC
+  id-token: write # Required for AWS OIDC
 
 jobs:
   build:
@@ -26,7 +28,10 @@ jobs:
     runs-on: ubuntu-latest
     if: >
       github.event_name == 'push' && 
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+      (github.ref == 'refs/heads/main' || 
+       github.ref == 'refs/heads/develop' || 
+       startsWith(github.ref, 'refs/heads/feature/') || 
+       startsWith(github.ref, 'refs/heads/fix/'))
     
     steps:
       - name: Checkout code
@@ -66,42 +71,47 @@ jobs:
     name: Deploy to Staging
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop'
+    if: >
+      github.event_name == 'push' && 
+      (github.ref == 'refs/heads/develop' || 
+       startsWith(github.ref, 'refs/heads/feature/') || 
+       startsWith(github.ref, 'refs/heads/fix/'))
     environment: ${{ vars.STAGING_ENV || 'staging' }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Configure AWS credentials
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          audience: sts.amazonaws.com
 
       - name: Deploy to ECS
         run: |
           aws ecs update-service --cluster staging-cluster --service pioneer-service --force-new-deployment
 
-  # deploy-production:
-  #   name: Deploy to Production
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   if: github.ref == 'refs/heads/main'
-  #   environment: ${{ vars.PRODUCTION_ENV || 'production' }}
-  #   
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v3
-
-  #     - name: Configure AWS credentials
-  #       uses: aws-actions/configure-aws-credentials@v2
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ secrets.AWS_REGION }}
-
-  #     - name: Deploy to ECS
-  #       run: |
-  #         aws ecs update-service --cluster production-cluster --service pioneer-service --force-new-deployment
+# Production deployment commented out for now
+# deploy-production:
+#   name: Deploy to Production
+#   needs: build
+#   runs-on: ubuntu-latest
+#   if: github.ref == 'refs/heads/main'
+#   environment: ${{ vars.PRODUCTION_ENV || 'production' }}
+#   
+#   steps:
+#     - name: Checkout code
+#       uses: actions/checkout@v3
+#
+#     - name: Configure AWS Credentials
+#       uses: aws-actions/configure-aws-credentials@v2
+#       with:
+#         role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+#         aws-region: ${{ env.AWS_REGION }}
+#         audience: sts.amazonaws.com
+#
+#     - name: Deploy to ECS
+#       run: |
+#         aws ecs update-service --cluster production-cluster --service pioneer-service --force-new-deployment
