@@ -90,3 +90,33 @@ Visit [cloudpioneer.com/pricing](https://cloudpioneer.com/pricing) for our prici
 ## Security
 
 Report security vulnerabilities to [security@cloudpioneer.com](mailto:security@cloudpioneer.com)
+
+# CloudPioneer
+
+Test change for branch protection rules.
+
+## Overview
+A cloud resource optimization platform that helps organizations manage and optimize their cloud infrastructure costs.
+
+## Features
+- Resource monitoring and optimization
+- Cost analysis and recommendations
+- Automated scaling and management
+- Real-time alerts and notifications
+
+## Getting Started
+1. Clone the repository
+2. Install dependencies
+3. Configure environment variables
+4. Run the application
+
+## Documentation
+- [API Documentation](docs/api_documentation.md)
+- [Technical Documentation](docs/technical_documentation.md)
+- [Troubleshooting Guide](docs/troubleshooting_guide.md)
+
+## Contributing
+Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting any changes.
+
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
