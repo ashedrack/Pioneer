@@ -30,7 +30,12 @@ jobs:
        github.ref == 'refs/heads/develop' || 
        startsWith(github.ref, 'refs/heads/feature/') || 
        startsWith(github.ref, 'refs/heads/fix/'))
-    
+
+jobs:
+  validate:
+    name: Validation and Testing
+    runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
