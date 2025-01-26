@@ -56,10 +56,18 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Download task definition
+      - name: Download and clean task definition
         run: |
-          aws ecs describe-task-definition --task-definition ${{ env.ECS_TASK_DEFINITION }} \
-          --query taskDefinition > task-definition.json
+          # Download the task definition
+          aws ecs describe-task-definition \
+            --task-definition ${{ env.ECS_TASK_DEFINITION }} \
+            --query taskDefinition > task-definition-full.json
+
+          # Remove invalid properties using jq
+          jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | (.containerDefinitions[] | del(.enableFaultInjection))' task-definition-full.json > task-definition.json
+          
+          echo "Cleaned task definition:"
+          cat task-definition.json
 
       - name: Update ECS task definition
         id: task-def
