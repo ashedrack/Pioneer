@@ -39,10 +39,6 @@ asyncio_mode = "strict"
 pythonpath = ["."]
 filterwarnings = [
     "ignore::DeprecationWarning",
-
-    "ignore::UserWarning"
-
     "ignore::UserWarning",
     "ignore::RuntimeWarning"
-
 ]
