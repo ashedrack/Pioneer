@@ -78,18 +78,25 @@ jobs:
           wait-for-service-stability: true
 
       - name: Post-deployment verification
+        id: verify
         run: |
           echo "Verifying deployment..."
-          aws ecs describe-services \
+          DEPLOYMENT_STATUS=$(aws ecs describe-services \
             --cluster ${{ env.ECS_CLUSTER }} \
             --services ${{ env.ECS_SERVICE }} \
             --query 'services[0].deployments[0].rolloutState' \
-            --output text
+            --output text)
+          echo "Deployment status: $DEPLOYMENT_STATUS"
+          if [ "$DEPLOYMENT_STATUS" = "COMPLETED" ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
 
       - name: Deployment Status
         if: always()
         run: |
-          if [[ "${{ job.status }}" == "success" ]]; then
+          if [[ "${{ steps.verify.outputs.status }}" == "success" ]]; then
             echo " Deployment completed successfully!"
           else
             echo " Deployment failed!"
