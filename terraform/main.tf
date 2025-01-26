@@ -19,7 +19,6 @@ resource "aws_iam_openid_connect_provider" "github_actions" {
     "sts.amazonaws.com"
   ]
 
-  # Current thumbprint for GitHub Actions
   thumbprint_list = [
     "6938fd4d98bab03faadb97b34396831e3780aea1"
   ]
@@ -59,7 +58,7 @@ resource "aws_iam_role" "github_actions" {
   }
 }
 
-# Add permissions for ECR and ECS
+# Add permissions for ECR, ECS, and IAM PassRole
 resource "aws_iam_role_policy" "github_actions_policy" {
   name = "github-actions-policy"
   role = aws_iam_role.github_actions.id
@@ -98,6 +97,14 @@ resource "aws_iam_role_policy" "github_actions_policy" {
           "ecs:ListServices"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = "iam:PassRole"
+        Resource = [
+          "arn:aws:iam::179079437960:role/pioneer-ecs-task-role",
+          "arn:aws:iam::179079437960:role/pioneer-ecs-execution-role"
+        ]
       }
     ]
   })
