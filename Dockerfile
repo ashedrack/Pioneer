@@ -1,7 +1,7 @@
-# Use Python 3.9 slim image
-FROM python:3.9-slim
+# Base image
+FROM python:3.9
 
-# Set working directory
+# Set work directory
 WORKDIR /app
 
 # Install system dependencies
@@ -25,6 +25,13 @@ COPY scripts/ ./scripts/
 # Install the package
 RUN pip install --no-cache-dir .
 
+# Copy requirements
+COPY requirements.txt .
+COPY . .
+
+# Upgrade pip
+RUN pip install --upgrade pip
+
 # Create necessary directories
 RUN mkdir -p /app/logs /app/data
 
@@ -46,3 +53,6 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 
 # Run the application
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "src.main:app"]
+
+# Run application (replace with your entrypoint)
+CMD ["python", "app.py"]
