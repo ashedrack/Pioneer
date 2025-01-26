@@ -1,7 +1,15 @@
 # CloudPioneer System Architecture
 
-## System Overview Diagram
+## Updated System Architecture
 
+### Overview
+The CloudPioneer system architecture has been enhanced to support new features and integrations, including:
+
+- **New Cloud Agents**: Additional agents for improved resource monitoring.
+- **Enhanced Data Collection Layer**: More robust metric collectors and support for additional integrations.
+- **Improved Processing Layer**: Streamlined processing for better performance and scalability.
+
+### Updated Diagram
 ```mermaid
 graph TB
     subgraph Cloud Resources
@@ -124,6 +132,13 @@ style PostgreSQL fill:#336791
 style Prometheus fill:#E6522C
 style Grafana fill:#F46800
 ```
+
+## System Architecture Updates
+
+### Key Changes
+- Integration of new cloud agents for improved monitoring.
+- Enhanced processing capabilities with additional stream processors.
+- Updated storage solutions to support increased data retention and analysis.
 
 ## Component Interactions
 
