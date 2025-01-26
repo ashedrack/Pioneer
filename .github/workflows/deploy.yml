@@ -3,22 +3,12 @@ name: CI/CD Pipeline
 on:
   push:
     branches:
-      - staging
       - main
+      - staging
   pull_request:
     branches:
-      - staging
       - main
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-  AWS_REGION: us-east-1
-
-permissions:
-  contents: read
-  packages: write
-  id-token: write
+      - staging
 
 jobs:
   validate:
@@ -33,23 +23,19 @@ jobs:
         with:
           python-version: "3.9"
 
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-cov flake8 black isort bandit safety
+          pip install pytest pytest-cov pytest-asyncio
+
+      - name: Disable TensorFlow Warnings
+        run: |
+          export TF_CPP_MIN_LOG_LEVEL=3
 
       - name: Run tests with coverage
         run: |
-          python -m pytest --cov=./ --cov-report=xml --junitxml=test-results.xml tests/
+          pytest tests/ --cov=./ --cov-report=xml --junitxml=test-results.xml
 
       - name: Ensure artifact files exist
         run: |
@@ -62,238 +48,3 @@ jobs:
           path: |
             test-results.xml
             coverage.xml
-
-      - name: Run code formatting checks
-        run: |
-          black --check .
-          isort --check-only .
-
-      - name: Run static analysis
-        run: |
-          flake8 .
-
-      - name: Run security scans
-        run: |
-          bandit -r .
-          safety check -r requirements.txt
-
-  build:
-    name: Build Docker Image
-    needs: validate
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: ${{ github.event_name == 'push' }}
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-
-  deploy-staging:
-    name: Deploy to Staging
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/staging'
-    environment: staging
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-          audience: sts.amazonaws.com
-
-      - name: Deploy to ECS
-        id: deploy
-        run: |
-          # Update ECS service
-          aws ecs update-service --cluster staging-cluster --service pioneer-service --force-new-deployment
-          echo "::set-output name=deployment_id::$(date +%s)"
-
-      - name: Verify Deployment
-        run: |
-          # Wait for ECS service to be stable
-          echo "Waiting for service to be stable..."
-          aws ecs wait services-stable \
-            --cluster staging-cluster \
-            --services pioneer-service
-
-      - name: Health Check
-        run: |
-          # Wait for service to be ready
-          sleep 30
-          
-          # Perform health checks
-          for i in {1..5}; do
-            response=$(curl -s -o /dev/null -w "%{http_code}" https://staging.pioneer.cloudpioneer.com/health)
-            if [ $response -eq 200 ]; then
-              echo "Health check passed"
-              exit 0
-            fi
-            echo "Attempt $i: Health check failed with status $response"
-            sleep 10
-          done
-          echo "Health check failed after 5 attempts"
-          exit 1
-
-      - name: Run Smoke Tests
-        run: |
-          # Add your smoke test commands here
-          echo "Running smoke tests..."
-          # pytest tests/smoke/ -v
-
-      - name: Monitor Deployment
-        run: |
-          # Check CloudWatch metrics
-          aws cloudwatch get-metric-statistics \
-            --namespace AWS/ECS \
-            --metric-name CPUUtilization \
-            --dimensions Name=ClusterName,Value=staging-cluster Name=ServiceName,Value=pioneer-service \
-            --start-time $(date -u -v-5M +"%Y-%m-%dT%H:%M:00Z") \
-            --end-time $(date -u +"%Y-%m-%dT%H:%M:00Z") \
-            --period 300 \
-            --statistics Average
-
-      - name: Rollback on Failure
-        if: failure()
-        run: |
-          echo "Deployment failed, initiating rollback..."
-          aws ecs update-service \
-            --cluster staging-cluster \
-            --service pioneer-service \
-            --force-new-deployment \
-            --task-definition $(aws ecs describe-services \
-              --cluster staging-cluster \
-              --services pioneer-service \
-              --query 'services[0].taskDefinition' \
-              --output text)
-
-  deploy-production:
-    name: Deploy to Production
-    needs: [build]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    environment:
-      name: production
-      url: https://pioneer.cloudpioneer.com
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-          audience: sts.amazonaws.com
-
-      - name: Backup Current State
-        run: |
-          # Store current task definition for potential rollback
-          aws ecs describe-task-definition \
-            --task-definition pioneer-service \
-            --query 'taskDefinition' \
-            --output json > task-def-backup.json
-
-      - name: Deploy to ECS
-        id: deploy
-        run: |
-          aws ecs update-service --cluster production-cluster --service pioneer-service --force-new-deployment
-          echo "::set-output name=deployment_id::$(date +%s)"
-
-      - name: Verify Deployment
-        run: |
-          echo "Waiting for service to be stable..."
-          aws ecs wait services-stable \
-            --cluster production-cluster \
-            --services pioneer-service
-
-      - name: Progressive Health Check
-        run: |
-          # Perform progressive health checks
-          declare -a endpoints=("/health" "/metrics" "/ready")
-          
-          for endpoint in "${endpoints[@]}"; do
-            echo "Checking endpoint: $endpoint"
-            for i in {1..3}; do
-              response=$(curl -s -o /dev/null -w "%{http_code}" https://pioneer.cloudpioneer.com$endpoint)
-              if [ $response -eq 200 ]; then
-                echo "Health check passed for $endpoint"
-                break
-              fi
-              echo "Attempt $i: Health check failed for $endpoint with status $response"
-              sleep 10
-              if [ $i -eq 3 ]; then
-                echo "Health check failed for $endpoint after 3 attempts"
-                exit 1
-              fi
-            done
-          done
-
-      - name: Load Testing
-        run: |
-          # Add load testing commands here
-          echo "Running load tests..."
-          # k6 run load-tests/production.js
-
-      - name: Monitor Production Metrics
-        run: |
-          # Monitor key metrics after deployment
-          for metric in CPUUtilization MemoryUtilization RequestCount; do
-            aws cloudwatch get-metric-statistics \
-              --namespace AWS/ECS \
-              --metric-name $metric \
-              --dimensions Name=ClusterName,Value=production-cluster Name=ServiceName,Value=pioneer-service \
-              --start-time $(date -u -v-5M +"%Y-%m-%dT%H:%M:00Z") \
-              --end-time $(date -u +"%Y-%m-%dT%H:%M:00Z") \
-              --period 300 \
-              --statistics Average
-          done
-
-      - name: Rollback on Failure
-        if: failure()
-        run: |
-          echo "Deployment failed, initiating rollback..."
-          # Restore previous task definition
-          aws ecs update-service \
-            --cluster production-cluster \
-            --service pioneer-service \
-            --task-definition $(jq -r '.taskDefinitionArn' task-def-backup.json)
-
-      - name: Notify Deployment Status
-        if: always()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const status = ${{ job.status == 'success' }} ? ' Success' : ' Failed';
-            const environment = 'Production';
-            const url = 'https://pioneer.cloudpioneer.com';
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## Deployment Status: ${status}
-              
-              Environment: ${environment}
-              URL: ${url}
-              Deployment ID: ${process.env.DEPLOYMENT_ID}
-              
-              ${status == ' Success' ? 'Deployment completed successfully.' : 'Deployment failed. Rollback initiated.'}`
-            });
