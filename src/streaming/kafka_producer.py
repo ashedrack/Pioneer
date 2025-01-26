@@ -8,7 +8,12 @@ class MetricsProducer:
         self.producer = KafkaProducer(
             bootstrap_servers=config['kafka_servers'],
             value_serializer=lambda v: json.dumps(v).encode('utf-8'),
-            security_protocol="SSL" if config.get('use_ssl', True) else "PLAINTEXT"
+            security_protocol="SSL" if config.get('use_ssl', True) else "PLAINTEXT",
+            max_request_size=1342177280,  # Match broker setting (1.25GB)
+            buffer_memory=2684354560,     # 2.5GB buffer
+            compression_type='gzip',      # Add compression to help with large messages
+            acks='all',                   # Ensure durability
+            retries=3                     # Retry on temporary failures
         )
         self.topic = config['topic']
 

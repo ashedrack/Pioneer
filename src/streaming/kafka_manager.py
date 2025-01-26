@@ -33,7 +33,10 @@ class KafkaManager:
                 value_serializer=lambda v: json.dumps(v).encode('utf-8'),
                 acks='all',
                 retries=3,
-                max_in_flight_requests_per_connection=1
+                max_in_flight_requests_per_connection=1,
+                max_request_size=1342177280,  # Match broker setting (1.25GB)
+                buffer_memory=2684354560,     # 2.5GB buffer
+                compression_type='gzip'       # Add compression to help with large messages
             )
         except Exception as e:
             self.logger.error(f"Failed to create Kafka producer: {str(e)}")
