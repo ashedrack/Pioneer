@@ -56,10 +56,18 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Download task definition
+      - name: Download and clean task definition
         run: |
-          aws ecs describe-task-definition --task-definition ${{ env.ECS_TASK_DEFINITION }} \
-          --query taskDefinition > task-definition.json
+          # Download the task definition
+          aws ecs describe-task-definition \
+            --task-definition ${{ env.ECS_TASK_DEFINITION }} \
+            --query taskDefinition > task-definition-full.json
+
+          # Remove invalid properties using jq
+          jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | (.containerDefinitions[] | del(.enableFaultInjection))' task-definition-full.json > task-definition.json
+          
+          echo "Cleaned task definition:"
+          cat task-definition.json
 
       - name: Update ECS task definition
         id: task-def
@@ -78,18 +86,25 @@ jobs:
           wait-for-service-stability: true
 
       - name: Post-deployment verification
+        id: verify
         run: |
           echo "Verifying deployment..."
-          aws ecs describe-services \
+          DEPLOYMENT_STATUS=$(aws ecs describe-services \
             --cluster ${{ env.ECS_CLUSTER }} \
             --services ${{ env.ECS_SERVICE }} \
             --query 'services[0].deployments[0].rolloutState' \
-            --output text
+            --output text)
+          echo "Deployment status: $DEPLOYMENT_STATUS"
+          if [ "$DEPLOYMENT_STATUS" = "COMPLETED" ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
 
       - name: Deployment Status
         if: always()
         run: |
-          if [[ "${{ job.status }}" == "success" ]]; then
+          if [[ "${{ steps.verify.outputs.status }}" == "success" ]]; then
             echo " Deployment completed successfully!"
           else
             echo " Deployment failed!"
