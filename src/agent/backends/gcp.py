@@ -1,15 +1,17 @@
-from google.cloud import monitoring_v3
-from google.api import metric_pb2
-from google.api import label_pb2
-from typing import List, Dict, Any
 import logging
-from .base import MetricBackend
+from typing import Any, Dict, List
+
+from google.api import label_pb2, metric_pb2
+from google.cloud import monitoring_v3
+
 from ..agent import Metric
+from .base import MetricBackend
+
 
 class GCPBackend(MetricBackend):
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
-        self.project_name = config['project_name']
+        self.project_name = config["project_name"]
         self.client = monitoring_v3.MetricServiceClient()
         self.project_path = f"projects/{self.project_name}"
         self.logger = logging.getLogger(__name__)
@@ -19,14 +21,14 @@ class GCPBackend(MetricBackend):
             for metric in metrics:
                 series = monitoring_v3.TimeSeries()
                 series.metric.type = f"custom.googleapis.com/{metric.name}"
-                
+
                 # Add labels (tags)
                 for key, value in metric.tags.items():
                     series.metric.labels[key] = str(value)
 
                 # Add resource
                 series.resource.type = "global"
-                
+
                 # Create the data point
                 point = monitoring_v3.Point()
                 point.value.double_value = float(metric.value)
@@ -35,10 +37,7 @@ class GCPBackend(MetricBackend):
 
                 # Write the time series data
                 self.client.create_time_series(
-                    request={
-                        "name": self.project_path,
-                        "time_series": [series]
-                    }
+                    request={"name": self.project_path, "time_series": [series]}
                 )
         except Exception as e:
             self.logger.error(f"Error sending metrics to Google Cloud Monitoring: {e}")

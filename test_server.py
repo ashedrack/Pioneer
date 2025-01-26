@@ -1,16 +1,19 @@
+from typing import Dict
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Dict
 
 app = FastAPI()
 
 # In-memory storage for users
 users_db: Dict[str, dict] = {}
 
+
 class UserLogin(BaseModel):
     email: str
     password: str
+
 
 class UserCreate(BaseModel):
     email: str
@@ -20,6 +23,7 @@ class UserCreate(BaseModel):
     region: str
     phone: str = ""
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -28,22 +32,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
 
 @app.post("/auth/login")
 async def login(user: UserLogin):
     # For testing, accept any credentials
     return {"access_token": "test_token", "token_type": "bearer"}
 
+
 @app.post("/auth/signup")
 async def signup(user: UserCreate):
     if user.email in users_db:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
+
     users_db[user.email] = user.dict()
     return {"access_token": "test_token", "token_type": "bearer"}
+
 
 @app.get("/api/v1/resources")
 async def get_resources():
@@ -55,17 +63,18 @@ async def get_resources():
                 "name": "Production Web Server",
                 "type": "t2.medium",
                 "region": "us-west",
-                "status": "running"
+                "status": "running",
             },
             {
                 "id": "server-002",
                 "name": "Database Server",
                 "type": "t2.large",
                 "region": "us-west",
-                "status": "running"
-            }
-        ]
+                "status": "running",
+            },
+        ],
     }
+
 
 @app.get("/api/v1/metrics/{resource_id}")
 async def get_metrics(resource_id: str):
@@ -79,9 +88,9 @@ async def get_metrics(resource_id: str):
                     "metrics": {
                         "cpu_usage": 45.5,
                         "memory_usage": 60.2,
-                        "disk_usage": 72.8
-                    }
+                        "disk_usage": 72.8,
+                    },
                 }
-            ]
-        }
+            ],
+        },
     }

@@ -1,6 +1,7 @@
 """Machine learning models package."""
-from typing import Dict, Any
+
+from typing import Any, Dict
 
 from .prediction import MetricsPredictor
 
-__all__ = ['MetricsPredictor']
+__all__ = ["MetricsPredictor"]
