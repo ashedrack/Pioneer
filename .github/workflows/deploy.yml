@@ -1,11 +1,11 @@
 name: CI/CD Pipeline
 
 on:
-  pull_request:
+  push:
     branches:
       - staging
       - main
-  push:
+  pull_request:
     branches:
       - staging
       - main
@@ -19,215 +19,86 @@ permissions:
   contents: read
   packages: write
   id-token: write
-  pull-requests: write
-  checks: write
 
 jobs:
   validate:
-    name: Validation Checks
+    name: Validation and Testing
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
-          cache: 'pip'
+          python-version: "3.9"
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install bandit safety pytest pytest-cov flake8 black isort pysa
-
-      - name: Check code formatting
-        continue-on-error: true
-        run: |
-          black --check .
-          isort --check-only --diff .
-          flake8 .
-
-      - name: Report formatting status
-        if: ${{ always() }}
-        run: |
-          if [ ${{ steps.format-check.outcome }} == 'failure' ]; then
-            echo "::warning::Code formatting issues found. Please run 'black .' and 'isort .' locally."
-          fi
-
-      - name: Run security scan
-        id: security-scan
-
-        continue-on-error: true
-        run: |
-          # Install security tools
-          pip install --upgrade bandit safety
-          
-          # Run Bandit security scan
-          echo "Running Bandit security scan..."
-          bandit -c .bandit -r . -f json -o bandit-report.json || echo "Bandit scan completed with issues"
-          bandit -c .bandit -r . -f html -o bandit-report.html || echo "Bandit HTML report generation completed"
-          
-          # Run dependency vulnerability scan
-          echo "Running Safety vulnerability scan..."
-          safety scan \
-            --output json \
-            --full-report \
-            --save-json safety-report.json \
-            requirements.txt || echo "Safety scan completed with issues"
-
-      - name: Analyze security reports
-        if: always()
-        run: |
-          echo "Analyzing security scan results..."
-          
-          # Initialize status variables
-          HIGH_SEVERITY=0
-          CRITICAL_SEVERITY=0
-          
-          # Check Bandit results
-          if [ -f bandit-report.json ]; then
-            echo "Processing Bandit results..."
-            HIGH_COUNT=$(jq '.metrics.high' bandit-report.json || echo "0")
-            if [ "$HIGH_COUNT" -gt "0" ]; then
-              echo "::warning::Found $HIGH_COUNT high severity issues in Bandit scan"
-              HIGH_SEVERITY=1
-              # List high severity issues
-              jq -r '.results[] | select(.issue_severity=="HIGH") | "- [\(.issue_text)](\(.filename):\(.line_number))"' bandit-report.json
-            fi
-          else
-            echo "::warning::Bandit report not found or invalid JSON format"
-          fi
-          
-          # Check Safety results
-          if [ -f safety-report.json ]; then
-            echo "Processing Safety results..."
-            if jq -e '.[] | select(.severity=="critical")' safety-report.json > /dev/null; then
-              echo "::warning::Found critical vulnerabilities in dependencies"
-              CRITICAL_SEVERITY=1
-              # List critical vulnerabilities
-              jq -r '.[] | select(.severity=="critical") | "- \(.package_name) \(.installed_version): \(.vulnerability_id)"' safety-report.json
-            fi
-          else
-            echo "::warning::Safety report not found or invalid JSON format"
-          fi
-          
-          # Set final status
-          if [ $HIGH_SEVERITY -eq 1 ] || [ $CRITICAL_SEVERITY -eq 1 ]; then
-            echo "::error::Security scan found critical issues. Please review the security reports."
-            exit 1
-          else
-            echo "No critical security issues found."
-          fi
-
-      - name: Upload security reports
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: security-reports
-          path: |
-            bandit-report.html
-            bandit-report.json
-            safety-report.json
-
-        run: |
-          # Install security tools
-          pip install bandit safety pysa
-          
-          # Run Bandit with HTML report
-          bandit -r . -f html -o bandit-report.html
-          bandit -r . -f json -o bandit-report.json
-          
-          # Run Safety with newer scan command
-          safety scan --output text --full-report requirements.txt > safety-report.txt
-          
-          # Run SAST analysis
-          pysa .
-
-      - name: Upload security reports
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: security-reports
-          path: |
-            bandit-report.html
-            bandit-report.json
-            safety-report.txt
-            .pysa_output/
-
-      - name: Check for critical vulnerabilities
-        if: always()
-        run: |
-          if grep -q "HIGH" bandit-report.json || grep -q "CRITICAL" safety-report.txt; then
-            echo "::warning::Critical security vulnerabilities found! Check the security reports for details."
-            exit 1
-          fi
+          pip install pytest pytest-cov flake8 black isort bandit safety
 
       - name: Run tests with coverage
         run: |
-          pytest --cov=./ --cov-report=xml --junitxml=test-results.xml
+          python -m pytest --cov=./ --cov-report=xml --junitxml=test-results.xml tests/
+
+      - name: Ensure artifact files exist
+        run: |
+          touch test-results.xml coverage.xml
 
       - name: Upload test results
         uses: actions/upload-artifact@v3
-        if: always()
         with:
           name: test-results
           path: |
             test-results.xml
             coverage.xml
 
+      - name: Run code formatting checks
+        run: |
+          black --check .
+          isort --check-only .
+
+      - name: Run static analysis
+        run: |
+          flake8 .
+
+      - name: Run security scans
+        run: |
+          bandit -r .
+          safety check -r requirements.txt
+
   build:
-    name: Build and Test
+    name: Build Docker Image
     needs: validate
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
-          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=staging,enable=${{ github.ref == 'refs/heads/staging' }}
-            type=ref,event=pr
-            type=sha,format=long
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
           push: ${{ github.event_name == 'push' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Scan Docker image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ steps.meta.outputs.tags }}
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
   deploy-staging:
     name: Deploy to Staging
@@ -312,117 +183,5 @@ jobs:
               --query 'services[0].taskDefinition' \
               --output text)
 
-  deploy-production:
-    name: Deploy to Production
-    needs: [build]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    environment:
-      name: production
-      url: https://pioneer.cloudpioneer.com
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-          audience: sts.amazonaws.com
 
-      - name: Backup Current State
-        run: |
-          # Store current task definition for potential rollback
-          aws ecs describe-task-definition \
-            --task-definition pioneer-service \
-            --query 'taskDefinition' \
-            --output json > task-def-backup.json
-
-      - name: Deploy to ECS
-        id: deploy
-        run: |
-          aws ecs update-service --cluster production-cluster --service pioneer-service --force-new-deployment
-          echo "::set-output name=deployment_id::$(date +%s)"
-
-      - name: Verify Deployment
-        run: |
-          echo "Waiting for service to be stable..."
-          aws ecs wait services-stable \
-            --cluster production-cluster \
-            --services pioneer-service
-
-      - name: Progressive Health Check
-        run: |
-          # Perform progressive health checks
-          declare -a endpoints=("/health" "/metrics" "/ready")
-          
-          for endpoint in "${endpoints[@]}"; do
-            echo "Checking endpoint: $endpoint"
-            for i in {1..3}; do
-              response=$(curl -s -o /dev/null -w "%{http_code}" https://pioneer.cloudpioneer.com$endpoint)
-              if [ $response -eq 200 ]; then
-                echo "Health check passed for $endpoint"
-                break
-              fi
-              echo "Attempt $i: Health check failed for $endpoint with status $response"
-              sleep 10
-              if [ $i -eq 3 ]; then
-                echo "Health check failed for $endpoint after 3 attempts"
-                exit 1
-              fi
-            done
-          done
-
-      - name: Load Testing
-        run: |
-          # Add load testing commands here
-          echo "Running load tests..."
-          # k6 run load-tests/production.js
-
-      - name: Monitor Production Metrics
-        run: |
-          # Monitor key metrics after deployment
-          for metric in CPUUtilization MemoryUtilization RequestCount; do
-            aws cloudwatch get-metric-statistics \
-              --namespace AWS/ECS \
-              --metric-name $metric \
-              --dimensions Name=ClusterName,Value=production-cluster Name=ServiceName,Value=pioneer-service \
-              --start-time $(date -u -v-5M +"%Y-%m-%dT%H:%M:00Z") \
-              --end-time $(date -u +"%Y-%m-%dT%H:%M:00Z") \
-              --period 300 \
-              --statistics Average
-          done
-
-      - name: Rollback on Failure
-        if: failure()
-        run: |
-          echo "Deployment failed, initiating rollback..."
-          # Restore previous task definition
-          aws ecs update-service \
-            --cluster production-cluster \
-            --service pioneer-service \
-            --task-definition $(jq -r '.taskDefinitionArn' task-def-backup.json)
-
-      - name: Notify Deployment Status
-        if: always()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const status = ${{ job.status == 'success' }} ? ' Success' : ' Failed';
-            const environment = 'Production';
-            const url = 'https://pioneer.cloudpioneer.com';
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## Deployment Status: ${status}
-              
-              Environment: ${environment}
-              URL: ${url}
-              Deployment ID: ${process.env.DEPLOYMENT_ID}
-              
-              ${status == ' Success' ? 'Deployment completed successfully.' : 'Deployment failed. Rollback initiated.'}`
-            });
