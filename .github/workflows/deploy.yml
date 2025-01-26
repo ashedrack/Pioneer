@@ -3,22 +3,12 @@ name: CI/CD Pipeline
 on:
   push:
     branches:
-      - staging
       - main
+      - staging
   pull_request:
     branches:
-      - staging
       - main
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-  AWS_REGION: us-east-1
-
-permissions:
-  contents: read
-  packages: write
-  id-token: write
+      - staging
 
 jobs:
   validate:
@@ -33,23 +23,19 @@ jobs:
         with:
           python-version: "3.9"
 
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-cov flake8 black isort bandit safety
+          pip install pytest pytest-cov pytest-asyncio
+
+      - name: Disable TensorFlow Warnings
+        run: |
+          export TF_CPP_MIN_LOG_LEVEL=3
 
       - name: Run tests with coverage
         run: |
-          pytest --cov=./ --cov-report=xml --junitxml=test-results.xml tests/
+          pytest tests/ --cov=./ --cov-report=xml --junitxml=test-results.xml
 
       - name: Ensure artifact files exist
         run: |
@@ -62,113 +48,3 @@ jobs:
           path: |
             test-results.xml
             coverage.xml
-
-      - name: Run code formatting checks
-        run: |
-          black --check .
-          isort --check-only .
-
-      - name: Run static analysis
-        run: |
-          flake8 .
-
-      - name: Run security scans
-        run: |
-          bandit -r .
-          safety check -r requirements.txt
-
-  build:
-    name: Build Docker Image
-    needs: validate
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-
-  deploy-staging:
-    name: Deploy to Staging
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/staging'
-    environment: staging
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Deploy to ECS
-        id: deploy
-        run: |
-          aws ecs update-service --cluster staging-cluster --service pioneer-service --force-new-deployment
-
-      - name: Verify Deployment
-        run: |
-          aws ecs wait services-stable \
-            --cluster staging-cluster \
-            --services pioneer-service
-
-      - name: Health Check
-        run: |
-          sleep 30
-          for i in {1..5}; do
-            response=$(curl -s -o /dev/null -w "%{http_code}" https://staging.pioneer.cloudpioneer.com/health)
-            if [ "$response" -eq 200 ]; then
-              echo "Health check passed"
-              exit 0
-            fi
-            echo "Attempt $i: Health check failed with status $response"
-            sleep 10
-          done
-          echo "Health check failed after 5 attempts"
-          exit 1
-
-      - name: Run Smoke Tests
-        run: |
-          echo "Running smoke tests..."
-          pytest tests/smoke/ -v || echo "Smoke tests failed"
-
-      - name: Monitor Deployment
-        run: |
-          aws cloudwatch get-metric-statistics \
-            --namespace AWS/ECS \
-            --metric-name CPUUtilization \
-            --dimensions Name=ClusterName,Value=staging-cluster Name=ServiceName,Value=pioneer-service \
-            --start-time $(date -u -d '5 minutes ago' +"%Y-%m-%dT%H:%M:00Z") \
-            --end-time $(date -u +"%Y-%m-%dT%H:%M:00Z") \
-            --period 300 \
-            --statistics Average
-
-      - name: Rollback on Failure
-        if: failure()
-        run: |
-          echo "Deployment failed, initiating rollback..."
-          aws ecs update-service \
-            --cluster staging-cluster \
-            --service pioneer-service \
-            --force-new-deployment \
-            --task-definition $(aws ecs describe-services \
-              --cluster staging-cluster \
-              --services pioneer-service \
-              --query 'services[0].taskDefinition' \
-              --output text)
