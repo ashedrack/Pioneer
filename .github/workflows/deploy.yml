@@ -1,0 +1,122 @@
+name: CI/CD Pipeline
+
+on:
+  pull_request:
+    branches:
+      - staging
+      - main
+  push:
+    branches:
+      - staging
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  AWS_REGION: us-east-1 # Set default region
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write # Required for AWS OIDC
+  pull-requests: write # Required for PR comments
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=staging,enable=${{ github.ref == 'refs/heads/staging' }}
+            type=ref,event=pr
+            type=sha,format=long
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+    environment: staging
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          audience: sts.amazonaws.com
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service --cluster staging-cluster --service pioneer-service --force-new-deployment
+
+      - name: Verify Deployment
+        run: |
+          echo "Waiting for service to be stable..."
+          aws ecs wait services-stable \
+            --cluster staging-cluster \
+            --services pioneer-service
+
+  deploy-production:
+    name: Deploy to Production
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://pioneer.cloudpioneer.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          audience: sts.amazonaws.com
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service --cluster production-cluster --service pioneer-service --force-new-deployment
+
+      - name: Verify Deployment
+        run: |
+          echo "Waiting for service to be stable..."
+          aws ecs wait services-stable \
+            --cluster production-cluster \
+            --services pioneer-service
