@@ -202,117 +202,118 @@ jobs:
               --query 'services[0].taskDefinition' \
               --output text)
 
-  deploy-production:
-    name: Deploy to Production
-    needs: [build]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    environment:
-      name: production
-      url: https://pioneer.cloudpioneer.com
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-          audience: sts.amazonaws.com
-
-      - name: Backup Current State
-        run: |
-          # Store current task definition for potential rollback
-          aws ecs describe-task-definition \
-            --task-definition pioneer-service \
-            --query 'taskDefinition' \
-            --output json > task-def-backup.json
-
-      - name: Deploy to ECS
-        id: deploy
-        run: |
-          aws ecs update-service --cluster production-cluster --service pioneer-service --force-new-deployment
-          echo "::set-output name=deployment_id::$(date +%s)"
-
-      - name: Verify Deployment
-        run: |
-          echo "Waiting for service to be stable..."
-          aws ecs wait services-stable \
-            --cluster production-cluster \
-            --services pioneer-service
-
-      - name: Progressive Health Check
-        run: |
-          # Perform progressive health checks
-          declare -a endpoints=("/health" "/metrics" "/ready")
-          
-          for endpoint in "${endpoints[@]}"; do
-            echo "Checking endpoint: $endpoint"
-            for i in {1..3}; do
-              response=$(curl -s -o /dev/null -w "%{http_code}" https://pioneer.cloudpioneer.com$endpoint)
-              if [ $response -eq 200 ]; then
-                echo "Health check passed for $endpoint"
-                break
-              fi
-              echo "Attempt $i: Health check failed for $endpoint with status $response"
-              sleep 10
-              if [ $i -eq 3 ]; then
-                echo "Health check failed for $endpoint after 3 attempts"
-                exit 1
-              fi
-            done
-          done
-
-      - name: Load Testing
-        run: |
-          # Add load testing commands here
-          echo "Running load tests..."
-          # k6 run load-tests/production.js
-
-      - name: Monitor Production Metrics
-        run: |
-          # Monitor key metrics after deployment
-          for metric in CPUUtilization MemoryUtilization RequestCount; do
-            aws cloudwatch get-metric-statistics \
-              --namespace AWS/ECS \
-              --metric-name $metric \
-              --dimensions Name=ClusterName,Value=production-cluster Name=ServiceName,Value=pioneer-service \
-              --start-time $(date -u -v-5M +"%Y-%m-%dT%H:%M:00Z") \
-              --end-time $(date -u +"%Y-%m-%dT%H:%M:00Z") \
-              --period 300 \
-              --statistics Average
-          done
-
-      - name: Rollback on Failure
-        if: failure()
-        run: |
-          echo "Deployment failed, initiating rollback..."
-          # Restore previous task definition
-          aws ecs update-service \
-            --cluster production-cluster \
-            --service pioneer-service \
-            --task-definition $(jq -r '.taskDefinitionArn' task-def-backup.json)
-
-      - name: Notify Deployment Status
-        if: always()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const status = ${{ job.status == 'success' }} ? ' Success' : ' Failed';
-            const environment = 'Production';
-            const url = 'https://pioneer.cloudpioneer.com';
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## Deployment Status: ${status}
-              
-              Environment: ${environment}
-              URL: ${url}
-              Deployment ID: ${process.env.DEPLOYMENT_ID}
-              
-              ${status == ' Success' ? 'Deployment completed successfully.' : 'Deployment failed. Rollback initiated.'}`
-            });
+# Production deployment commented out until needed
+# deploy-production:
+#   name: Deploy to Production
+#   needs: [build]
+#   runs-on: ubuntu-latest
+#   if: github.ref == 'refs/heads/main'
+#   environment:
+#     name: production
+#     url: https://pioneer.cloudpioneer.com
+#   
+#   steps:
+#     - name: Checkout code
+#       uses: actions/checkout@v3
+#
+#     - name: Configure AWS Credentials
+#       uses: aws-actions/configure-aws-credentials@v2
+#       with:
+#         role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+#         aws-region: ${{ env.AWS_REGION }}
+#         audience: sts.amazonaws.com
+#
+#     - name: Backup Current State
+#       run: |
+#         # Store current task definition for potential rollback
+#         aws ecs describe-task-definition \
+#           --task-definition pioneer-service \
+#           --query 'taskDefinition' \
+#           --output json > task-def-backup.json
+#
+#     - name: Deploy to ECS
+#       id: deploy
+#       run: |
+#         aws ecs update-service --cluster production-cluster --service pioneer-service --force-new-deployment
+#         echo "::set-output name=deployment_id::$(date +%s)"
+#
+#     - name: Verify Deployment
+#       run: |
+#         echo "Waiting for service to be stable..."
+#         aws ecs wait services-stable \
+#           --cluster production-cluster \
+#           --services pioneer-service
+#
+#     - name: Progressive Health Check
+#       run: |
+#         # Perform progressive health checks
+#         declare -a endpoints=("/health" "/metrics" "/ready")
+#         
+#         for endpoint in "${endpoints[@]}"; do
+#           echo "Checking endpoint: $endpoint"
+#           for i in {1..3}; do
+#             response=$(curl -s -o /dev/null -w "%{http_code}" https://pioneer.cloudpioneer.com$endpoint)
+#             if [ $response -eq 200 ]; then
+#               echo "Health check passed for $endpoint"
+#               break
+#             fi
+#             echo "Attempt $i: Health check failed for $endpoint with status $response"
+#             sleep 10
+#             if [ $i -eq 3 ]; then
+#               echo "Health check failed for $endpoint after 3 attempts"
+#               exit 1
+#             fi
+#           done
+#         done
+#
+#     - name: Load Testing
+#       run: |
+#         # Add load testing commands here
+#         echo "Running load tests..."
+#         # k6 run load-tests/production.js
+#
+#     - name: Monitor Production Metrics
+#       run: |
+#         # Monitor key metrics after deployment
+#         for metric in CPUUtilization MemoryUtilization RequestCount; do
+#           aws cloudwatch get-metric-statistics \
+#             --namespace AWS/ECS \
+#             --metric-name $metric \
+#             --dimensions Name=ClusterName,Value=production-cluster Name=ServiceName,Value=pioneer-service \
+#             --start-time $(date -u -v-5M +"%Y-%m-%dT%H:%M:00Z") \
+#             --end-time $(date -u +"%Y-%m-%dT%H:%M:00Z") \
+#             --period 300 \
+#             --statistics Average
+#         done
+#
+#     - name: Rollback on Failure
+#       if: failure()
+#       run: |
+#         echo "Deployment failed, initiating rollback..."
+#         # Restore previous task definition
+#         aws ecs update-service \
+#           --cluster production-cluster \
+#           --service pioneer-service \
+#           --task-definition $(jq -r '.taskDefinitionArn' task-def-backup.json)
+#
+#     - name: Notify Deployment Status
+#       if: always()
+#       uses: actions/github-script@v6
+#       with:
+#         script: |
+#           const status = ${{ job.status == 'success' }} ? ' Success' : ' Failed';
+#           const environment = 'Production';
+#           const url = 'https://pioneer.cloudpioneer.com';
+#           
+#           github.rest.issues.createComment({
+#             issue_number: context.issue.number,
+#             owner: context.repo.owner,
+#             repo: context.repo.repo,
+#             body: `## Deployment Status: ${status}
+#             
+#             Environment: ${environment}
+#             URL: ${url}
+#             Deployment ID: ${process.env.DEPLOYMENT_ID}
+#             
+#             ${status == ' Success' ? 'Deployment completed successfully.' : 'Deployment failed. Rollback initiated.'}`
+#           });
