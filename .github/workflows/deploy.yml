@@ -68,10 +68,6 @@ jobs:
             --task-definition ${{ env.ECS_TASK_DEFINITION }} \
             --query 'taskDefinition' > task-definition-full.json
 
-          # Debug: Show the downloaded task definition
-          echo "Downloaded task definition:"
-          cat task-definition-full.json
-
           # Extract and clean the container definitions
           jq '{
             family: .family,
@@ -83,16 +79,6 @@ jobs:
             memory: .memory,
             requiresCompatibilities: ["FARGATE"]
           }' task-definition-full.json > task-definition.json
-
-          # Debug: Show the cleaned task definition
-          echo "Cleaned task definition:"
-          cat task-definition.json
-
-          # Validate containerDefinitions array
-          if ! jq -e 'has("containerDefinitions")' task-definition.json > /dev/null; then
-            echo "Error: Missing containerDefinitions array"
-            exit 1
-          fi
 
       - name: Update ECS task definition
         id: task-def
@@ -110,21 +96,66 @@ jobs:
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
 
+      - name: Debug ECS Service
+        run: |
+          echo "Getting detailed service information..."
+          aws ecs describe-services \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services ${{ env.ECS_SERVICE }} \
+            --output json | jq '.'
+
       - name: Post-deployment verification
         id: verify
         run: |
           echo "Verifying deployment..."
-          DEPLOYMENT_STATUS=$(aws ecs describe-services \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --services ${{ env.ECS_SERVICE }} \
-            --query 'services[0].deployments[0].rolloutState' \
-            --output text)
-          echo "Deployment status: $DEPLOYMENT_STATUS"
-          if [ "$DEPLOYMENT_STATUS" = "COMPLETED" ]; then
-            echo "status=success" >> $GITHUB_OUTPUT
-          else
-            echo "status=failure" >> $GITHUB_OUTPUT
-          fi
+          MAX_ATTEMPTS=10
+          WAIT_SECONDS=30
+          attempt=1
+          
+          while [ $attempt -le $MAX_ATTEMPTS ]; do
+            echo "Attempt $attempt of $MAX_ATTEMPTS"
+            
+            # Get service details with proper query for PRIMARY deployment
+            SERVICE_JSON=$(aws ecs describe-services \
+              --cluster ${{ env.ECS_CLUSTER }} \
+              --services ${{ env.ECS_SERVICE }})
+            
+            # Get deployment status from PRIMARY deployment
+            DEPLOYMENT_STATUS=$(echo $SERVICE_JSON | jq -r '.services[0].deployments[] | select(.status=="PRIMARY") | .rolloutState')
+            RUNNING_COUNT=$(echo $SERVICE_JSON | jq -r '.services[0].runningCount')
+            DESIRED_COUNT=$(echo $SERVICE_JSON | jq -r '.services[0].desiredCount')
+            PENDING_COUNT=$(echo $SERVICE_JSON | jq -r '.services[0].pendingCount')
+            
+            echo "Deployment status: $DEPLOYMENT_STATUS"
+            echo "Running tasks: $RUNNING_COUNT/$DESIRED_COUNT (Pending: $PENDING_COUNT)"
+            
+            # Check deployment events for any recent errors
+            echo "Recent events:"
+            echo $SERVICE_JSON | jq -r '.services[0].events[:3] | .[] | .message'
+            
+            if [ "$DEPLOYMENT_STATUS" = "COMPLETED" ] && [ "$RUNNING_COUNT" -eq "$DESIRED_COUNT" ] && [ "$PENDING_COUNT" -eq 0 ]; then
+              echo " Deployment successful!"
+              echo "status=success" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            
+            if [ "$DEPLOYMENT_STATUS" = "FAILED" ]; then
+              echo " Deployment failed!"
+              # Get failure reason from PRIMARY deployment
+              FAILURE_REASON=$(echo $SERVICE_JSON | jq -r '.services[0].deployments[] | select(.status=="PRIMARY") | .rolloutStateReason')
+              echo "Failure reason: $FAILURE_REASON"
+              echo "status=failure" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+            
+            echo "Waiting $WAIT_SECONDS seconds before next check..."
+            sleep $WAIT_SECONDS
+            attempt=$((attempt + 1))
+          done
+          
+          echo " Deployment verification timed out after $((MAX_ATTEMPTS * WAIT_SECONDS)) seconds"
+          echo "status=failure" >> $GITHUB_OUTPUT
+          exit 1
 
       - name: Deployment Status
         if: always()
