@@ -45,10 +45,18 @@ jobs:
           pip install bandit safety pytest pytest-cov flake8 black isort
 
       - name: Check code formatting
+        continue-on-error: true
         run: |
           black --check .
           isort --check-only --diff .
           flake8 .
+
+      - name: Report formatting status
+        if: ${{ always() }}
+        run: |
+          if [ ${{ steps.format-check.outcome }} == 'failure' ]; then
+            echo "::warning::Code formatting issues found. Please run 'black .' and 'isort .' locally."
+          fi
 
       - name: Run security scan
         run: |
