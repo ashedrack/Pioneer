@@ -155,18 +155,3 @@ jobs:
       - name: Deploy to ECS
         run: |
           aws ecs update-service --cluster production-cluster --service pioneer-service --force-new-deployment
-
-  notify:
-    name: Notify Team
-    needs: [deploy-staging, deploy-production]
-    runs-on: ubuntu-latest
-    if: always()
-    
-    steps:
-      - name: Notify on Slack
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
