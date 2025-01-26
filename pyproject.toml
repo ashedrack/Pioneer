@@ -33,7 +33,12 @@ test = [
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-v"
+addopts = "-v --import-mode=importlib"
 testpaths = ["tests"]
-asyncio_mode = "auto"
+asyncio_mode = "strict"
 pythonpath = ["."]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+    "ignore::RuntimeWarning"
+]

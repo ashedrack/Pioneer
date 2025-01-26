@@ -1,20 +1,53 @@
-"""Test configuration."""
+"""Test configuration and fixtures for Cloud Pioneer.
 
+This module contains shared fixtures and configuration for all test modules.
+"""
+
+import asyncio
 import os
-from unittest.mock import MagicMock
+import sys
+from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
+from unittest.mock import MagicMock
 
+# Add project root to Python path if not already added
+project_root = Path(__file__).parent.parent.absolute()
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
-@pytest.fixture(scope="session", autouse=True)
-def aws_credentials():
-    """Mock AWS credentials."""
-    os.environ["AWS_ACCESS_KEY_ID"] = "testing"
-    os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"
-    os.environ["AWS_SECURITY_TOKEN"] = "testing"
-    os.environ["AWS_SESSION_TOKEN"] = "testing"
+from src.main import app  # noqa: E402
+
+# Configure test environment
+os.environ.setdefault("ENVIRONMENT", "test")
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Create an instance of the default event loop for the test session."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
+@pytest.fixture(scope="session")
+def test_client():
+    """Create a test client for the FastAPI application."""
+    with TestClient(app) as client:
+        yield client
+
+@pytest.fixture(autouse=True)
+def setup_test_env():
+    """Set up test environment variables before each test."""
+    os.environ["AWS_ACCESS_KEY_ID"] = "test-key"
+    os.environ["AWS_SECRET_ACCESS_KEY"] = "test-secret"
     os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
-
+    yield
+    # Clean up environment after test
+    for key in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"]:
+        os.environ.pop(key, None)
 
 @pytest.fixture
 def mock_dynamodb_resource(mocker):
