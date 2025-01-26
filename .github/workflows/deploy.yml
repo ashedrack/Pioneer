@@ -60,24 +60,26 @@ jobs:
 
       - name: Run security scan
         id: security-scan
-
         continue-on-error: true
         run: |
           # Install security tools
           pip install --upgrade bandit safety
           
-          # Run Bandit security scan
           echo "Running Bandit security scan..."
-          bandit -c .bandit -r . -f json -o bandit-report.json || echo "Bandit scan completed with issues"
-          bandit -c .bandit -r . -f html -o bandit-report.html || echo "Bandit HTML report generation completed"
+          # Run Bandit with verbose output for debugging
+          bandit -v -c .bandit -r . -f json -o bandit-report.json || echo "Bandit scan completed with issues"
+          bandit -v -c .bandit -r . -f html -o bandit-report.html || echo "Bandit HTML report generation completed"
           
-          # Run dependency vulnerability scan
           echo "Running Safety vulnerability scan..."
+          # Run Safety scan with better error handling
           safety scan \
             --output json \
             --full-report \
-            --save-json safety-report.json \
+            --json-output-file safety-report.json \
             requirements.txt || echo "Safety scan completed with issues"
+          
+          # Create empty report files if they don't exist
+          touch bandit-report.json bandit-report.html safety-report.json
 
       - name: Analyze security reports
         if: always()
@@ -88,28 +90,29 @@ jobs:
           HIGH_SEVERITY=0
           CRITICAL_SEVERITY=0
           
-          # Check Bandit results
-          if [ -f bandit-report.json ]; then
+          # Check if reports exist and are valid JSON
+          echo "Validating Bandit report..."
+          if [ -f bandit-report.json ] && jq empty bandit-report.json 2>/dev/null; then
             echo "Processing Bandit results..."
-            HIGH_COUNT=$(jq '.metrics.high' bandit-report.json || echo "0")
+            HIGH_COUNT=$(jq '.metrics.high // 0' bandit-report.json)
             if [ "$HIGH_COUNT" -gt "0" ]; then
               echo "::warning::Found $HIGH_COUNT high severity issues in Bandit scan"
               HIGH_SEVERITY=1
               # List high severity issues
-              jq -r '.results[] | select(.issue_severity=="HIGH") | "- [\(.issue_text)](\(.filename):\(.line_number))"' bandit-report.json
+              jq -r '.results[] | select(.issue_severity=="HIGH") | "- [\(.issue_text)](\(.filename):\(.line_number))"' bandit-report.json || echo "No detailed results available"
             fi
           else
             echo "::warning::Bandit report not found or invalid JSON format"
           fi
           
-          # Check Safety results
-          if [ -f safety-report.json ]; then
+          echo "Validating Safety report..."
+          if [ -f safety-report.json ] && jq empty safety-report.json 2>/dev/null; then
             echo "Processing Safety results..."
             if jq -e '.[] | select(.severity=="critical")' safety-report.json > /dev/null; then
               echo "::warning::Found critical vulnerabilities in dependencies"
               CRITICAL_SEVERITY=1
               # List critical vulnerabilities
-              jq -r '.[] | select(.severity=="critical") | "- \(.package_name) \(.installed_version): \(.vulnerability_id)"' safety-report.json
+              jq -r '.[] | select(.severity=="critical") | "- \(.package_name) \(.installed_version): \(.vulnerability_id)"' safety-report.json || echo "No detailed results available"
             fi
           else
             echo "::warning::Safety report not found or invalid JSON format"
@@ -132,39 +135,6 @@ jobs:
             bandit-report.html
             bandit-report.json
             safety-report.json
-
-        run: |
-          # Install security tools
-          pip install bandit safety pysa
-          
-          # Run Bandit with HTML report
-          bandit -r . -f html -o bandit-report.html
-          bandit -r . -f json -o bandit-report.json
-          
-          # Run Safety with newer scan command
-          safety scan --output text --full-report requirements.txt > safety-report.txt
-          
-          # Run SAST analysis
-          pysa .
-
-      - name: Upload security reports
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: security-reports
-          path: |
-            bandit-report.html
-            bandit-report.json
-            safety-report.txt
-            .pysa_output/
-
-      - name: Check for critical vulnerabilities
-        if: always()
-        run: |
-          if grep -q "HIGH" bandit-report.json || grep -q "CRITICAL" safety-report.txt; then
-            echo "::warning::Critical security vulnerabilities found! Check the security reports for details."
-            exit 1
-          fi
 
       - name: Run tests with coverage
         run: |
