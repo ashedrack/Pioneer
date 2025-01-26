@@ -76,21 +76,12 @@ jobs:
             --statistics Average
 
   alert:
-    name: Send Alerts
+    name: Create Alert Issue
     needs: [health-check, resource-metrics]
     runs-on: ubuntu-latest
     if: failure()
     
     steps:
-      - name: Send Alert to Slack
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
-          text: "⚠️ Service health check or resource metrics check failed! Please investigate."
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
       - name: Create GitHub Issue
         uses: actions/github-script@v6
         with:
