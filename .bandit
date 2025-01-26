@@ -1,4 +1,5 @@
 [bandit]
+fix/security-config-clean
 # Files and directories to skip
 exclude_dirs = tests,docs,.venv,.git,__pycache__,build,dist
 
@@ -33,3 +34,17 @@ hardcoded_password_string.skips = tests/*,conftest.py
 
 # Skip subprocess call checks in specific files
 subprocess_popen_with_shell_equals_true.skips = scripts/*.py
+=======
+exclude_dirs: [tests, docs, .venv, .git, __pycache__]
+skips: []
+targets: [src]
+
+[bandit.assert_used]
+skips: [tests/*, conftest.py]
+
+[bandit.try_except_pass]
+skips: [src/utils/error_handling.py]
+
+[bandit.hardcoded_password_string]
+skips: [tests/*, conftest.py]
+staging
