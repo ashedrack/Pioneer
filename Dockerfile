@@ -5,38 +5,30 @@ FROM python:3.9
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first to leverage Docker cache
-COPY requirements.txt .
+# Upgrade pip
+RUN pip install --no-cache-dir --upgrade pip
+
+# Copy dependency files first (to leverage Docker cache)
+COPY requirements.txt pyproject.toml setup.py ./
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir .
 
-# Copy Python package files
-COPY pyproject.toml setup.py ./
+# Copy the rest of the application code
 COPY src/ ./src/
 COPY config/ ./config/
 COPY scripts/ ./scripts/
 
-# Install the package
-RUN pip install --no-cache-dir .
-
-# Copy requirements
-COPY requirements.txt .
-COPY . .
-
-# Upgrade pip
-RUN pip install --upgrade pip
-
-# Create necessary directories
-RUN mkdir -p /app/logs /app/data
-
-# Set permissions
-RUN chmod +x /app/scripts/*
+# Create necessary directories and set permissions
+RUN mkdir -p /app/logs /app/data \
+    && chmod +x /app/scripts/*
 
 # Expose ports
 EXPOSE 8000
@@ -51,8 +43,5 @@ ENV FLASK_ENV=production
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run the application
+# Run the application using Gunicorn with Uvicorn workers
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "src.main:app"]
-
-# Run application (replace with your entrypoint)
-CMD ["python", "app.py"]
