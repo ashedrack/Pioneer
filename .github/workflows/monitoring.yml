@@ -1,0 +1,104 @@
+name: Monitoring and Alerts
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # Run every 15 minutes
+  workflow_dispatch:  # Allow manual triggers
+
+jobs:
+  health-check:
+    name: Service Health Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [staging, production]
+    
+    steps:
+      - name: Check API Health
+        uses: jtalk/url-health-check-action@v3
+        with:
+          url: https://${{ matrix.environment }}.pioneer.cloudpioneer.com/health
+          max-attempts: 3
+          retry-delay: 5s
+          retry-all: true
+
+      - name: Check Kafka Connection
+        uses: jtalk/url-health-check-action@v3
+        with:
+          url: https://${{ matrix.environment }}.pioneer.cloudpioneer.com/kafka/health
+          max-attempts: 3
+          retry-delay: 5s
+          retry-all: true
+
+      - name: Check Prometheus Metrics
+        uses: jtalk/url-health-check-action@v3
+        with:
+          url: https://${{ matrix.environment }}.pioneer.cloudpioneer.com/metrics
+          max-attempts: 3
+          retry-delay: 5s
+          retry-all: true
+
+  resource-metrics:
+    name: Resource Usage Metrics
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [staging, production]
+    
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Check ECS Service CPU Usage
+        run: |
+          aws cloudwatch get-metric-statistics \
+            --namespace AWS/ECS \
+            --metric-name CPUUtilization \
+            --dimensions Name=ClusterName,Value=${{ matrix.environment }}-cluster Name=ServiceName,Value=pioneer-service \
+            --start-time $(date -u -v-15M +"%Y-%m-%dT%H:%M:00Z") \
+            --end-time $(date -u +"%Y-%m-%dT%H:%M:00Z") \
+            --period 300 \
+            --statistics Average
+
+      - name: Check ECS Service Memory Usage
+        run: |
+          aws cloudwatch get-metric-statistics \
+            --namespace AWS/ECS \
+            --metric-name MemoryUtilization \
+            --dimensions Name=ClusterName,Value=${{ matrix.environment }}-cluster Name=ServiceName,Value=pioneer-service \
+            --start-time $(date -u -v-15M +"%Y-%m-%dT%H:%M:00Z") \
+            --end-time $(date -u +"%Y-%m-%dT%H:%M:00Z") \
+            --period 300 \
+            --statistics Average
+
+  alert:
+    name: Send Alerts
+    needs: [health-check, resource-metrics]
+    runs-on: ubuntu-latest
+    if: failure()
+    
+    steps:
+      - name: Send Alert to Slack
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
+          text: "⚠️ Service health check or resource metrics check failed! Please investigate."
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Create GitHub Issue
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Service Health Check Failed',
+              body: `Service health check or resource metrics check failed at ${new Date().toISOString()}\n\nPlease investigate the workflow logs for more details.`,
+              labels: ['incident', 'high-priority']
+            })
