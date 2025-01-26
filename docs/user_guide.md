@@ -205,6 +205,15 @@ The dashboard is divided into four main sections:
 - Update notifications
 - Service impact details
 
+## User Guide Updates
+
+### New Setup Instructions
+- Ensure all new agents are configured correctly in the YAML configuration files.
+- Follow the updated API documentation for new endpoints and authentication methods.
+
+### Enhanced Features
+- Users can now monitor additional cloud resources and utilize new integrations.
+
 ## Feedback and Support
 
 ### Providing Feedback

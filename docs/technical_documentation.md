@@ -13,6 +13,7 @@
 8. [Security](#security)
 9. [Monitoring & Logging](#monitoring--logging)
 10. [Troubleshooting](#troubleshooting)
+11. [Technical Documentation Updates](#technical-documentation-updates)
 
 ## System Overview
 
@@ -331,3 +332,14 @@ For additional support:
 
 ## Contributing
 Please read CONTRIBUTING.md for details on our code of conduct and the process for submitting pull requests.
+
+## Technical Documentation Updates
+
+### New Features
+- Support for additional cloud environments (AWS, GCP, Azure).
+- Enhanced monitoring capabilities through new cloud agents.
+- Improved data transmission and buffering mechanisms.
+
+### Architecture Changes
+- Updated system architecture to include new agents and processing layers.
+- Enhanced data collection and storage mechanisms for better performance.

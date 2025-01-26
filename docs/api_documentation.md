@@ -18,6 +18,12 @@ All API requests require authentication using JWT tokens.
 Authorization: Bearer <your_token>
 ```
 
+## API Documentation Updates
+
+### New Endpoints
+- **Get Resource Metrics**: Updated to include new parameters for enhanced data retrieval.
+- **Authentication**: Ensure to use the latest JWT token generation method for secure access.
+
 ## Endpoints
 
 ### Resource Management
