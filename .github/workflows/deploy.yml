@@ -56,7 +56,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-<<<<<<< HEAD
+
       - name: Configure AWS Credentials
         if: github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/main'
         uses: aws-actions/configure-aws-credentials@v4
@@ -64,7 +64,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: GithubActionsSession
-=======
+
       - name: Install jq
         run: |
           sudo apt-get update
@@ -175,4 +175,3 @@ jobs:
             echo " Deployment failed!"
             exit 1
           fi
->>>>>>> origin/staging
