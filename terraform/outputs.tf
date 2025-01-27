@@ -1,19 +1,23 @@
-output "api_gateway_endpoint" {
-  value = aws_apigatewayv2_api.main.api_endpoint
+output "ecr_repository_url" {
+  value = data.aws_ecr_repository.app.repository_url
 }
 
-output "cognito_user_pool_id" {
-  value = aws_cognito_user_pool.main.id
+output "ecs_cluster_name" {
+  value = aws_ecs_cluster.main.name
 }
 
-output "cognito_client_id" {
-  value = aws_cognito_user_pool_client.client.id
+output "ecs_service_name" {
+  value = aws_ecs_service.app.name
 }
 
-output "s3_bucket_name" {
-  value = aws_s3_bucket.storage.id
+output "vpc_id" {
+  value = aws_vpc.main.id
 }
 
-output "dynamodb_table_name" {
-  value = aws_dynamodb_table.main.name
+output "public_subnet_ids" {
+  value = aws_subnet.public[*].id
+}
+
+output "ecs_security_group_id" {
+  value = aws_security_group.ecs_tasks.id
 }

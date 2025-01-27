@@ -37,12 +37,9 @@ addopts = "-v --import-mode=importlib"
 testpaths = ["tests"]
 asyncio_mode = "strict"
 pythonpath = ["."]
+
 filterwarnings = [
     "ignore::DeprecationWarning",
-
-    "ignore::UserWarning"
-
     "ignore::UserWarning",
     "ignore::RuntimeWarning"
-
 ]
