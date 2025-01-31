@@ -73,6 +73,140 @@ cloudpioneer/
 └── kubernetes/          # Container orchestration
 ```
 
+## Project Setup Guide
+
+### Prerequisites
+- Git
+- Homebrew (for macOS users)
+- Python 3.10 (recommended) or higher
+
+### Step-by-Step Setup Instructions
+
+1. **Clone the Repository**
+   ```bash
+   git clone [repository-url]
+   cd Pioneer
+   ```
+
+2. **Install Python 3.10** (if not already installed)
+   ```bash
+   # For macOS users (using Homebrew)
+   brew install python@3.10
+   ```
+
+3. **Create and Activate Virtual Environment**
+   ```bash
+   # Create virtual environment using Python 3.10
+   /opt/homebrew/opt/python@3.10/bin/python3.10 -m venv venv
+
+   # Activate virtual environment
+   source venv/bin/activate  # For macOS/Linux
+   ```
+
+4. **Update Package Management Tools**
+   ```bash
+   # Upgrade pip and install wheel
+   pip install --upgrade pip
+   pip install wheel
+   ```
+
+5. **Install Project Dependencies**
+   ```bash
+   # Install required packages
+   pip install -r requirements.txt
+   pip install -e .
+   ```
+
+6. **Configure IDE**
+   - When prompted, select the new virtual environment (`venv`) for your workspace
+   - This ensures proper code completion and development tools integration
+
+7. **Environment Variables**
+   ```bash
+   # Copy the example environment file
+   cp .env.example .env
+   # Edit .env with your specific configurations
+   ```
+
+### Development Setup
+
+For frontend development:
+```bash
+cd frontend
+npm install
+npm start
+```
+
+### Starting the Development Servers
+
+#### Backend (FastAPI)
+
+1. **Start the Backend Server**
+   ```bash
+   # Make sure you're in the project root and virtual environment is activated
+   cd /path/to/Pioneer
+   source venv/bin/activate
+
+   # Start the FastAPI server using uvicorn
+   uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+   The backend server will be available at:
+   - API Documentation: http://localhost:8000/docs
+   - Alternative Documentation: http://localhost:8000/redoc
+   - Health Check: http://localhost:8000/health
+   - API Endpoints: http://localhost:8000/api/v1/
+
+#### Frontend (React)
+
+1. **Start the Frontend Development Server**
+   ```bash
+   # Navigate to the frontend directory
+   cd frontend
+
+   # Install dependencies (if not already installed)
+   npm install
+
+   # Start the development server
+   npm start
+   ```
+
+   The frontend will automatically open in your default browser at http://localhost:3000
+
+#### Development Notes
+
+- Both servers support hot reloading - changes to the code will automatically trigger a refresh
+- The frontend is configured to proxy API requests to the backend at http://localhost:8000
+- Keep both servers running while developing
+- The frontend includes:
+  - Material-UI components
+  - React Router for navigation
+  - React Query for data fetching
+  - Nivo and Recharts for data visualization
+
+### Common Issues and Solutions
+
+1. **Python Version Conflicts**
+   - If you encounter compilation errors, ensure you're using Python 3.10
+   - Some packages may not be compatible with newer Python versions
+
+2. **Package Installation Errors**
+   - If you encounter installation errors, try installing packages individually
+   - Make sure you have the latest pip and wheel installed
+
+3. **Virtual Environment Issues**
+   - If the virtual environment isn't working, delete it and recreate:
+     ```bash
+     deactivate  # if already in a virtual environment
+     rm -rf venv
+     /opt/homebrew/opt/python@3.10/bin/python3.10 -m venv venv
+     source venv/bin/activate
+     ```
+
+### Additional Resources
+- [Python Virtual Environments Guide](https://docs.python.org/3/tutorial/venv.html)
+- [Pip Package Manager Documentation](https://pip.pypa.io/en/stable/)
+
 ## Support
 
 - Enterprise Support: [support@cloudpioneer.com](mailto:support@cloudpioneer.com)
