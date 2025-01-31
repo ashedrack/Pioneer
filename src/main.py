@@ -71,7 +71,7 @@ def get_optimizer() -> ResourceOptimizer:
 # Include routers
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(api_router, prefix="/api/v1", tags=["api"])
-app.include_router(metrics_router, tags=["metrics"])
+app.include_router(metrics_router, prefix="/api/metrics", tags=["metrics"])
 
 @app.get("/")
 async def root() -> Dict[str, str]:
