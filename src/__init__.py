@@ -1,11 +1,24 @@
-from flask import Flask
-from src.api.resource_metrics import resource_metrics_bp
-from src.api.logs import logs_bp
-from src.api.process_monitoring import process_monitoring_bp
+"""Initialize the FastAPI application."""
 
-app = Flask(__name__)
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-# Register blueprints
-app.register_blueprint(resource_metrics_bp)
-app.register_blueprint(logs_bp)
-app.register_blueprint(process_monitoring_bp)
+# Import routes
+from src.api.routes import router as api_router
+from src.auth.routes import router as auth_router
+
+# Create FastAPI app
+app = FastAPI(title="Cloud Pioneer")
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(api_router, prefix="/api/v1", tags=["api"])
