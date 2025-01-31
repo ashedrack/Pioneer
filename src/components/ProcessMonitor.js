@@ -92,6 +92,7 @@ const ProcessMonitor = () => {
                 { text: 'Stopped', value: 'stopped' },
                 { text: 'Warning', value: 'warning' },
             ],
+            onFilter: (value, record) => record.status === value,
         },
         {
             title: 'CPU Usage',

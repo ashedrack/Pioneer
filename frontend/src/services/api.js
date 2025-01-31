@@ -30,8 +30,8 @@ export const resourceApi = {
 
 // Metrics API
 export const metricsApi = {
-  getUtilizationTrend: () => api.get('/metrics/utilization'),
-  getCostAnalysis: () => api.get('/metrics/cost'),
+  getCurrentUtilization: () => api.get('/metrics/utilization/current'),
+  getUtilizationHistory: () => api.get('/metrics/utilization/history'),
   getResourceStatus: () => api.get('/metrics/status'),
   getResourceMetrics: (resourceId) => api.get(`/metrics/resource/${resourceId}`),
 };

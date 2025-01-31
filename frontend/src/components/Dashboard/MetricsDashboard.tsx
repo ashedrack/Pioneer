@@ -1,148 +1,180 @@
-import React, { useEffect } from 'react';
-import { Grid, Paper, Typography, CircularProgress, Box } from '@mui/material';
-import { useApi } from '../../hooks/useApi';
-import { metricsApi } from '../../services/api';
+import React from 'react';
+import {
+  Box,
+  Grid,
+  Paper,
+  Typography,
+  Card,
+  CardContent,
+  LinearProgress,
+} from '@mui/material';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 
-interface MetricCardProps {
-  title: string;
-  value: string | number;
-  unit?: string;
-}
-
-interface UtilizationData {
-  timestamp: string;
-  value: number;
-}
-
-interface CostData {
-  month: string;
-  actual: number;
-  predicted: number;
-}
-
-interface StatusData {
-  ok: number;
-  warning: number;
-  no_data: number;
-}
-
-const MetricCard: React.FC<MetricCardProps> = ({ title, value, unit }) => (
-  <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', height: 140 }}>
-    <Typography component="h2" variant="h6" color="primary" gutterBottom>
-      {title}
-    </Typography>
-    <Typography component="p" variant="h4">
-      {value} {unit}
-    </Typography>
-  </Paper>
-);
+// Mock data for metrics
+const mockData = {
+  utilization: [
+    { timestamp: '2025-01-31T00:00:00Z', value: 75 },
+    { timestamp: '2025-01-31T01:00:00Z', value: 78 },
+    { timestamp: '2025-01-31T02:00:00Z', value: 82 },
+    { timestamp: '2025-01-31T03:00:00Z', value: 85 },
+    { timestamp: '2025-01-31T04:00:00Z', value: 80 },
+    { timestamp: '2025-01-31T05:00:00Z', value: 77 },
+    { timestamp: '2025-01-31T06:00:00Z', value: 73 },
+  ],
+  cost: [
+    { month: '2024-12', actual: 11500, predicted: 12000 },
+    { month: '2025-01', actual: 12300, predicted: 12800 },
+    { month: '2025-02', actual: 0, predicted: 13200 },
+    { month: '2025-03', actual: 0, predicted: 13500 },
+  ],
+  status: {
+    ok: 85,
+    warning: 10,
+    error: 5,
+  }
+};
 
 const MetricsDashboard: React.FC = () => {
-  const {
-    data: utilizationData,
-    loading: utilizationLoading,
-    error: utilizationError,
-    execute: fetchUtilization
-  } = useApi<UtilizationData[]>(metricsApi.getUtilizationTrend);
-
-  const {
-    data: costData,
-    loading: costLoading,
-    error: costError,
-    execute: fetchCost
-  } = useApi<CostData[]>(metricsApi.getCostAnalysis);
-
-  const {
-    data: statusData,
-    loading: statusLoading,
-    error: statusError,
-    execute: fetchStatus
-  } = useApi<StatusData>(metricsApi.getResourceStatus);
-
-  useEffect(() => {
-    fetchUtilization();
-    fetchCost();
-    fetchStatus();
-  }, [fetchUtilization, fetchCost, fetchStatus]);
-
-  if (utilizationLoading || costLoading || statusLoading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (utilizationError || costError || statusError) {
-    return (
-      <Paper sx={{ p: 2, bgcolor: 'error.light' }}>
-        <Typography color="error">
-          Error loading metrics: {utilizationError || costError || statusError}
-        </Typography>
-      </Paper>
-    );
-  }
-
-  const latestUtilization = utilizationData?.[0]?.value || 0;
-  const monthlyCost = costData?.[costData?.length - 1]?.actual || 0;
-  const resourceCount = statusData ? 
-    (Object.values(statusData) as number[]).reduce((a, b) => a + b, 0) 
-    : 0;
+  // Using mock data directly instead of API calls
+  const metrics = mockData;
 
   return (
-    <Grid container spacing={3}>
-      <Grid item xs={12} md={4}>
-        <MetricCard
-          title="Resource Utilization"
-          value={latestUtilization.toFixed(1)}
-          unit="%"
-        />
-      </Grid>
-      <Grid item xs={12} md={4}>
-        <MetricCard
-          title="Monthly Cost"
-          value={`$${monthlyCost.toLocaleString()}`}
-          unit=""
-        />
-      </Grid>
-      <Grid item xs={12} md={4}>
-        <MetricCard
-          title="Total Resources"
-          value={resourceCount}
-          unit="active"
-        />
-      </Grid>
-      
-      {statusData && (
-        <Grid item xs={12}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Resource Status
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={4}>
-                <Typography color="success.main" variant="h4">
-                  {statusData.ok || 0}
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" gutterBottom>
+        Metrics Dashboard
+      </Typography>
+
+      <Grid container spacing={3}>
+        {/* Resource Status */}
+        <Grid item xs={12} md={4}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Resource Status
+              </Typography>
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Healthy Resources
                 </Typography>
-                <Typography variant="subtitle1">Healthy</Typography>
-              </Grid>
-              <Grid item xs={4}>
-                <Typography color="warning.main" variant="h4">
-                  {statusData.warning || 0}
+                <LinearProgress
+                  variant="determinate"
+                  value={metrics.status.ok}
+                  color="success"
+                  sx={{ my: 1 }}
+                />
+                <Typography variant="body2" color="text.secondary">
+                  Warning State
                 </Typography>
-                <Typography variant="subtitle1">Warning</Typography>
-              </Grid>
-              <Grid item xs={4}>
-                <Typography color="error.main" variant="h4">
-                  {statusData.no_data || 0}
+                <LinearProgress
+                  variant="determinate"
+                  value={metrics.status.warning}
+                  color="warning"
+                  sx={{ my: 1 }}
+                />
+                <Typography variant="body2" color="text.secondary">
+                  Error State
                 </Typography>
-                <Typography variant="subtitle1">No Data</Typography>
-              </Grid>
-            </Grid>
-          </Paper>
+                <LinearProgress
+                  variant="determinate"
+                  value={metrics.status.error}
+                  color="error"
+                  sx={{ my: 1 }}
+                />
+              </Box>
+            </CardContent>
+          </Card>
         </Grid>
-      )}
-    </Grid>
+
+        {/* Utilization Chart */}
+        <Grid item xs={12} md={8}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Resource Utilization
+              </Typography>
+              <Box sx={{ height: 300 }}>
+                <ResponsiveContainer>
+                  <LineChart data={metrics.utilization}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="timestamp"
+                      tickFormatter={(value) => new Date(value).toLocaleTimeString()}
+                    />
+                    <YAxis domain={[0, 100]} />
+                    <Tooltip
+                      labelFormatter={(value) => new Date(value).toLocaleString()}
+                      formatter={(value: number) => [`${value}%`, 'Utilization']}
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="value"
+                      name="Utilization"
+                      stroke="#8884d8"
+                      strokeWidth={2}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Cost Analysis */}
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Cost Analysis
+              </Typography>
+              <Box sx={{ height: 300 }}>
+                <ResponsiveContainer>
+                  <LineChart data={metrics.cost}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="month"
+                      tickFormatter={(value) => value.split('-')[1]}
+                    />
+                    <YAxis />
+                    <Tooltip
+                      formatter={(value: number) => [
+                        `$${value.toLocaleString()}`,
+                        'Cost',
+                      ]}
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="actual"
+                      name="Actual Cost"
+                      stroke="#82ca9d"
+                      strokeWidth={2}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="predicted"
+                      name="Predicted Cost"
+                      stroke="#8884d8"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </Box>
   );
 };
 

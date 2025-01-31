@@ -11,7 +11,7 @@ import {
   ListItemText,
   Toolbar,
   Typography,
-  Button,
+  useTheme,
   Divider,
 } from '@mui/material';
 import {
@@ -20,10 +20,11 @@ import {
   Storage as StorageIcon,
   Timeline as TimelineIcon,
   Settings as SettingsIcon,
-  Notifications as NotificationsIcon,
   ExitToApp as LogoutIcon,
+  MonetizationOn as CostIcon,
+  Memory as ProcessIcon,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 const drawerWidth = 240;
@@ -36,6 +37,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const theme = useTheme();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -49,15 +52,17 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Resources', icon: <StorageIcon />, path: '/resources' },
-    { text: 'Analytics', icon: <TimelineIcon />, path: '/analytics' },
+    { text: 'Metrics', icon: <TimelineIcon />, path: '/metrics' },
+    { text: 'Cost Optimization', icon: <CostIcon />, path: '/cost-optimization' },
+    { text: 'Process Monitor', icon: <ProcessIcon />, path: '/processes' },
     { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
   ];
 
   const drawer = (
     <div>
       <Toolbar>
-        <Typography variant="h6" noWrap component="div">
-          CloudPioneer
+        <Typography variant="h6" noWrap>
+          Cloud Pioneer
         </Typography>
       </Toolbar>
       <Divider />
@@ -67,14 +72,32 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             button
             key={item.text}
             onClick={() => navigate(item.path)}
+            selected={location.pathname === item.path}
+            sx={{
+              '&.Mui-selected': {
+                backgroundColor: theme.palette.primary.main + '20',
+              },
+              '&.Mui-selected:hover': {
+                backgroundColor: theme.palette.primary.main + '30',
+              },
+            }}
           >
-            <ListItemIcon>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.text} />
+            <ListItemIcon
+              sx={{
+                color: location.pathname === item.path ? theme.palette.primary.main : 'inherit',
+              }}
+            >
+              {item.icon}
+            </ListItemIcon>
+            <ListItemText
+              primary={item.text}
+              sx={{
+                color: location.pathname === item.path ? theme.palette.primary.main : 'inherit',
+              }}
+            />
           </ListItem>
         ))}
-      </List>
-      <Divider />
-      <List>
+        <Divider sx={{ my: 2 }} />
         <ListItem button onClick={handleLogout}>
           <ListItemIcon>
             <LogoutIcon />
@@ -93,8 +116,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
-          bgcolor: 'white',
-          color: 'text.primary',
         }}
       >
         <Toolbar>
@@ -107,33 +128,23 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           >
             <MenuIcon />
           </IconButton>
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h6" noWrap component="div">
-              Resource Optimization Dashboard
-            </Typography>
-          </Box>
-          <IconButton color="inherit">
-            <NotificationsIcon />
-          </IconButton>
-          <Button
-            color="inherit"
-            onClick={handleLogout}
-            startIcon={<LogoutIcon />}
-          >
-            Logout
-          </Button>
+          <Typography variant="h6" noWrap component="div">
+            {menuItems.find((item) => item.path === location.pathname)?.text || 'Dashboard'}
+          </Typography>
         </Toolbar>
       </AppBar>
       <Box
         component="nav"
         sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
+        aria-label="mailbox folders"
       >
         <Drawer
           variant="temporary"
+          anchor={theme.direction === 'rtl' ? 'right' : 'left'}
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{
-            keepMounted: true, // Better open performance on mobile.
+            keepMounted: true,
           }}
           sx={{
             display: { xs: 'block', sm: 'none' },
@@ -165,9 +176,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           flexGrow: 1,
           p: 3,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: 8,
+          minHeight: '100vh',
+          backgroundColor: theme.palette.background.default,
         }}
       >
+        <Toolbar />
         {children}
       </Box>
     </Box>

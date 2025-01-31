@@ -10,11 +10,16 @@ const api = axios.create({
 // Add a request interceptor to include the auth token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    try {
+      const token = localStorage.getItem('token');
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    } catch (error) {
+      console.error('Error accessing localStorage:', error);
+      return config;
     }
-    return config;
   },
   (error) => {
     return Promise.reject(error);
@@ -26,7 +31,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
+      try {
+        localStorage.removeItem('token');
+      } catch (storageError) {
+        console.error('Error removing token from localStorage:', storageError);
+      }
       window.location.href = '/login';
     }
     return Promise.reject(error);
