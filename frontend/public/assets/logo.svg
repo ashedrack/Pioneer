@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .logo-cloud {
+      fill: #1e1e1e;
+      stroke: #00f2ff;
+      stroke-width: 8;
+    }
+    .logo-circuits {
+      fill: none;
+      stroke: #00f2ff;
+      stroke-width: 6;
+    }
+    .logo-ai {
+      fill: #00f2ff;
+      font-family: 'Arial', sans-serif;
+      font-weight: bold;
+      font-size: 120px;
+    }
+    .logo-glow {
+      fill: #00f2ff;
+      filter: blur(20px);
+      opacity: 0.5;
+    }
+  </style>
+  <g>
+    <path class="logo-cloud" d="M256 96c88.224 0 160 71.776 160 160s-71.776 160-160 160-160-71.776-160-160S167.776 96 256 96z"/>
+    <path class="logo-circuits" d="M256 128v64M256 320v64M160 256h-32M384 256h-32M208 208l-22.627-22.627M326.627 326.627l-22.627-22.627M304 208l22.627-22.627M185.373 326.627l22.627-22.627"/>
+    <text class="logo-ai" x="50%" y="50%" text-anchor="middle" dominant-baseline="middle">AI</text>
+    <path class="logo-glow" d="M256 96c88.224 0 160 71.776 160 160s-71.776 160-160 160-160-71.776-160-160S167.776 96 256 96z"/>
+  </g>
+</svg>

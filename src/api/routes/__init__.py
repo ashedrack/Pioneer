@@ -5,6 +5,7 @@ API routes package
 from fastapi import APIRouter
 
 from .resource_management import router as resource_management_router
+from .metrics import router as metrics_router
 
 # Create main API router
 router = APIRouter()
@@ -14,4 +15,4 @@ router.include_router(
     resource_management_router, prefix="/resources", tags=["resources"]
 )
 
-__all__ = ["router", "resource_management_router"]
+__all__ = ["router", "resource_management_router", "metrics_router"]

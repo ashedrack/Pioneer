@@ -23,18 +23,14 @@ import TimelineIcon from '@mui/icons-material/Timeline';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import MonitorIcon from '@mui/icons-material/Monitor';
 import LogoutIcon from '@mui/icons-material/Logout';
-import ThemeToggle from '../common/ThemeToggle';
+import ThemeToggle from './common/ThemeToggle';
 
 // Import dashboard sub-components
-import MetricsDashboard from './MetricsDashboard';
+import MetricsDashboard from './Dashboard/MetricsDashboard';
 import LogViewer from './LogViewer';
 import ProcessMonitor from './ProcessMonitor';
 
-interface DashboardProps {
-  onLogout?: () => void;
-}
-
-const DashboardHome: React.FC = () => (
+const DashboardHome = () => (
   <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
     <Grid container spacing={3}>
       {/* Welcome Message */}
@@ -57,7 +53,7 @@ const DashboardHome: React.FC = () => (
   </Container>
 );
 
-const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
+const Dashboard = () => {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
@@ -66,46 +62,47 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   };
 
   const handleLogout = () => {
-    if (onLogout) {
-      onLogout();
-    }
+    localStorage.removeItem('token');
+    navigate('/');
   };
 
   const menuItems = [
-    { text: 'Overview', icon: <DashboardIcon />, path: '/' },
-    { text: 'Metrics', icon: <TimelineIcon />, path: '/metrics' },
-    { text: 'Logs', icon: <ListAltIcon />, path: '/logs' },
-    { text: 'Processes', icon: <MonitorIcon />, path: '/processes' },
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+    { text: 'Metrics', icon: <TimelineIcon />, path: '/dashboard/metrics' },
+    { text: 'Logs', icon: <ListAltIcon />, path: '/dashboard/logs' },
+    { text: 'Processes', icon: <MonitorIcon />, path: '/dashboard/processes' },
   ];
 
   const drawer = (
     <div>
       <Toolbar>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Box
-            component="img"
-            src="/assets/logo.svg"
-            alt="CloudPioneer AI"
-            sx={{ 
-              height: 40,
-              mr: 1,
-              filter: 'drop-shadow(0 0 10px rgba(0, 242, 255, 0.3))'
-            }}
-          />
-          <Typography
-            variant="h6"
-            noWrap
-            sx={{
-              background: 'linear-gradient(45deg, #00f2ff 30%, #00a8ff 90%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontWeight: 700,
-              letterSpacing: 1
-            }}
-          >
-            CloudPioneer AI
-          </Typography>
-        </Box>
+        <Typography variant="h6" noWrap component="div">
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Box
+              component="img"
+              src="/assets/logo.svg"
+              alt="CloudPioneer AI"
+              sx={{ 
+                height: 40,
+                mr: 1,
+                filter: 'drop-shadow(0 0 10px rgba(0, 242, 255, 0.3))'
+              }}
+            />
+            <Typography
+              variant="h6"
+              noWrap
+              sx={{
+                background: 'linear-gradient(45deg, #00f2ff 30%, #00a8ff 90%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontWeight: 700,
+                letterSpacing: 1
+              }}
+            >
+              CloudPioneer AI
+            </Typography>
+          </Box>
+        </Typography>
       </Toolbar>
       <Divider />
       <List>
@@ -113,10 +110,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           <ListItem
             button
             key={item.text}
-            onClick={() => {
-              navigate(item.path);
-              handleDrawerToggle();
-            }}
+            onClick={() => navigate(item.path)}
           >
             <ListItemIcon>{item.icon}</ListItemIcon>
             <ListItemText primary={item.text} />
@@ -137,16 +131,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
   return (
     <Box sx={{ display: 'flex' }}>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { sm: `calc(100% - 240px)` },
-          ml: { sm: `240px` },
-        }}
-      >
+      <AppBar position="fixed">
         <Toolbar>
           <IconButton
             color="inherit"
+            aria-label="open drawer"
             edge="start"
             onClick={handleDrawerToggle}
             sx={{ mr: 2, display: { sm: 'none' } }}
@@ -154,7 +143,31 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Dashboard
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box
+                component="img"
+                src="/assets/logo.svg"
+                alt="CloudPioneer AI"
+                sx={{ 
+                  height: 40,
+                  mr: 1,
+                  filter: 'drop-shadow(0 0 10px rgba(0, 242, 255, 0.3))'
+                }}
+              />
+              <Typography
+                variant="h6"
+                noWrap
+                sx={{
+                  background: 'linear-gradient(45deg, #00f2ff 30%, #00a8ff 90%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  fontWeight: 700,
+                  letterSpacing: 1
+                }}
+              >
+                CloudPioneer AI
+              </Typography>
+            </Box>
           </Typography>
           <ThemeToggle />
           <Button color="inherit" onClick={handleLogout}>
@@ -175,10 +188,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           }}
           sx={{
             display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: 240,
-            },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 240 },
           }}
         >
           {drawer}
@@ -187,10 +197,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           variant="permanent"
           sx={{
             display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: 240,
-            },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 240 },
           }}
           open
         >

@@ -11,8 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.api.models import (MetricsPrediction, MetricsSubmission,
                             ResourceRecommendation, ScheduledAction,
                             ScheduleResponse)
-from src.api.routes import metrics
 from src.api.routes import router as api_router
+from src.api.routes.metrics import router as metrics_router
 from src.auth.routes import router as auth_router
 from src.automation.optimizer import ResourceOptimizer
 from src.automation.scheduler import ResourceScheduler
@@ -71,8 +71,7 @@ def get_optimizer() -> ResourceOptimizer:
 # Include routers
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(api_router, prefix="/api/v1", tags=["api"])
-app.include_router(metrics.router, prefix="/api/v1/metrics", tags=["metrics"])
-
+app.include_router(metrics_router, tags=["metrics"])
 
 @app.get("/")
 async def root() -> Dict[str, str]:

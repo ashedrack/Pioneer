@@ -3,9 +3,10 @@ import random
 from datetime import datetime, timedelta
 from typing import Dict, List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 # Configure logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -50,7 +51,8 @@ def generate_cost_data(months: int = 6) -> List[Dict]:
 
 
 @router.get("/overall")
-async def get_overall_metrics():
+async def get_overall_metrics(request: Request):
+    logger.info(f"Received request for overall metrics. URL: {request.url}")
     try:
         logger.info("Fetching overall metrics")
         metrics = generate_dummy_metrics()
@@ -62,7 +64,8 @@ async def get_overall_metrics():
 
 
 @router.get("/utilization/trend")
-async def get_utilization_trend():
+async def get_utilization_trend(request: Request):
+    logger.info(f"Received request for utilization trend. URL: {request.url}")
     try:
         logger.info("Fetching utilization trend data")
         data = generate_utilization_data()
@@ -76,7 +79,8 @@ async def get_utilization_trend():
 
 
 @router.get("/cost/analysis")
-async def get_cost_analysis():
+async def get_cost_analysis(request: Request):
+    logger.info(f"Received request for cost analysis. URL: {request.url}")
     try:
         logger.info("Fetching cost analysis data")
         data = generate_cost_data()
@@ -90,7 +94,8 @@ async def get_cost_analysis():
 
 
 @router.get("/resource/status")
-async def get_resource_status():
+async def get_resource_status(request: Request):
+    logger.info(f"Received request for resource status. URL: {request.url}")
     try:
         logger.info("Fetching resource status")
         status = {
@@ -102,11 +107,14 @@ async def get_resource_status():
         return status
     except Exception as e:
         logger.error(f"Error generating resource status: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error generating resource status")
+        raise HTTPException(
+            status_code=500, detail="Error generating resource status"
+        )
 
 
 @router.get("/{resource_id}")
-async def get_resource_metrics(resource_id: str):
+async def get_resource_metrics(request: Request, resource_id: str):
+    logger.info(f"Received request for resource metrics. URL: {request.url}")
     try:
         logger.info(f"Fetching metrics for resource {resource_id}")
         metrics = {
