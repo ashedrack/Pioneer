@@ -91,6 +91,33 @@ Visit [cloudpioneer.com/pricing](https://cloudpioneer.com/pricing) for our prici
 
 Report security vulnerabilities to [security@cloudpioneer.com](mailto:security@cloudpioneer.com)
 
+## Backend Setup
+
+```bash
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+.\venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start the FastAPI server
+python -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+## Frontend Setup
+
+```bash
+# Navigate to frontend directory and install dependencies
+cd frontend
+npm install
+
+# Start the development server
+npm start
+```
+
 # CloudPioneer
 
 Test change for branch protection rules.

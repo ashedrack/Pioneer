@@ -21,7 +21,7 @@ export interface AuthResponse {
 
 export const login = async (data: LoginData): Promise<AuthResponse> => {
   try {
-    const response = await api.post('/auth/login', data);
+    const response = await api.post('/api/auth/login', data);
     if (response.data.access_token) {
       localStorage.setItem('token', response.data.access_token);
     }
@@ -34,7 +34,7 @@ export const login = async (data: LoginData): Promise<AuthResponse> => {
 
 export const signUp = async (data: SignUpData): Promise<AuthResponse> => {
   try {
-    const response = await api.post('/auth/signup', data);
+    const response = await api.post('/api/auth/signup', data);
     if (response.data.access_token) {
       localStorage.setItem('token', response.data.access_token);
     }
@@ -53,6 +53,15 @@ export const verifyToken = async (): Promise<boolean> => {
   try {
     await api.get('/auth/verify');
     return true;
+  } catch (error) {
+    return false;
+  }
+};
+
+export const checkSession = async (): Promise<boolean> => {
+  try {
+    const response = await api.get('/api/auth/check-session');
+    return response.status === 200;
   } catch (error) {
     return false;
   }

@@ -11,8 +11,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.api.models import (MetricsPrediction, MetricsSubmission,
                             ResourceRecommendation, ScheduledAction,
                             ScheduleResponse)
-from src.api.routes import metrics
 from src.api.routes import router as api_router
+from src.api.routes.metrics import router as metrics_router
+from src.api.routes.cost_optimization import router as cost_optimization_router
+from src.api.routes.process_management import router as process_management_router
 from src.auth.routes import router as auth_router
 from src.automation.optimizer import ResourceOptimizer
 from src.automation.scheduler import ResourceScheduler
@@ -43,14 +45,12 @@ _predictor = None
 _scheduler = None
 _optimizer = None
 
-
 def get_predictor() -> ResourcePredictor:
     """Get metrics predictor instance."""
     global _predictor
     if _predictor is None:
         _predictor = ResourcePredictor()
     return _predictor
-
 
 def get_scheduler() -> ResourceScheduler:
     """Get resource scheduler instance."""
@@ -59,7 +59,6 @@ def get_scheduler() -> ResourceScheduler:
         _scheduler = ResourceScheduler()
     return _scheduler
 
-
 def get_optimizer() -> ResourceOptimizer:
     """Get resource optimizer instance."""
     global _optimizer
@@ -67,24 +66,22 @@ def get_optimizer() -> ResourceOptimizer:
         _optimizer = ResourceOptimizer()
     return _optimizer
 
-
 # Include routers
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(api_router, prefix="/api/v1", tags=["api"])
-app.include_router(metrics.router, prefix="/api/v1/metrics", tags=["metrics"])
-
+app.include_router(metrics_router, prefix="/api/metrics", tags=["metrics"])
+app.include_router(cost_optimization_router, prefix="/api/cost-optimization", tags=["cost-optimization"])
+app.include_router(process_management_router, prefix="/api", tags=["processes"])
 
 @app.get("/")
 async def root() -> Dict[str, str]:
     """Root endpoint."""
     return {"message": "Welcome to Cloud Pioneer"}
 
-
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy"}
-
 
 @app.post("/api/v1/metrics")
 async def submit_metrics(
@@ -168,7 +165,6 @@ async def get_schedule(
     except Exception as e:
         logger.error(f"Error getting schedule: {str(e)}")
         return {"status": "error", "message": str(e)}
-
 
 if __name__ == "__main__":
     uvicorn.run("src.main:app", host="0.0.0.0", port=8000, reload=True)
